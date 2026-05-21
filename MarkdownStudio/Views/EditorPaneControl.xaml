@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="MarkdownStudio.Views.EditorPaneControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    HorizontalAlignment="Stretch"
+    VerticalAlignment="Stretch"
+    HorizontalContentAlignment="Stretch"
+    VerticalContentAlignment="Stretch">
+
+    <Grid x:Name="LayoutGrid" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="EditorColumn" Width="*" />
+            <ColumnDefinition Width="1" />
+            <ColumnDefinition x:Name="PreviewColumn" Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <controls:WebView2 x:Name="EditorView" Grid.Column="0"
+                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                           MinWidth="200" MinHeight="200" />
+        <Border Grid.Column="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+        <controls:WebView2 x:Name="PreviewView" Grid.Column="2"
+                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                           MinWidth="200" MinHeight="200" />
+    </Grid>
+</UserControl>

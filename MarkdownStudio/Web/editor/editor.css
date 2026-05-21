@@ -1,0 +1,13 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--monaco-bg, #1e1e1e);
+}
+
+#container {
+  position: absolute;
+  inset: 0;
+}
