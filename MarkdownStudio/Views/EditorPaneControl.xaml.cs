@@ -29,6 +29,9 @@ public sealed partial class EditorPaneControl : UserControl
     public DocumentTab? Document { get; set; }
     public string MonacoTheme { get; set; } = "ms-daylight";
     public string PreviewTheme { get; set; } = "theme-daylight";
+    public string InitialFontFamily { get; set; } = "";
+    public int    InitialFontSize   { get; set; } = 14;
+    public int    InitialTabSize    { get; set; } = 2;
 
     public event Action<string>? TextChanged;
     public event Action?         FocusToggleRequested;
@@ -66,7 +69,15 @@ public sealed partial class EditorPaneControl : UserControl
         EditorView.WebMessageReceived += OnEditorWebMessage;
         PreviewView.WebMessageReceived += OnPreviewWebMessage;
 
-        var editorQuery  = $"?theme={Uri.EscapeDataString(MonacoTheme)}";
+        var editorQueryParts = new System.Collections.Generic.List<string>
+        {
+            $"theme={Uri.EscapeDataString(MonacoTheme)}",
+            $"size={InitialFontSize}",
+            $"tab={InitialTabSize}",
+        };
+        if (!string.IsNullOrEmpty(InitialFontFamily))
+            editorQueryParts.Add($"family={Uri.EscapeDataString(InitialFontFamily)}");
+        var editorQuery  = "?" + string.Join("&", editorQueryParts);
         var previewQuery = $"?theme={Uri.EscapeDataString(PreviewTheme)}";
         EditorView.CoreWebView2.Navigate($"https://{VirtualHost}/editor/index.html{editorQuery}");
         PreviewView.CoreWebView2.Navigate($"https://{VirtualHost}/preview/index.html{previewQuery}");
@@ -205,6 +216,17 @@ public sealed partial class EditorPaneControl : UserControl
             var encoded = JsonSerializer.Serialize(previewTheme);
             await PreviewView.CoreWebView2.ExecuteScriptAsync($"window.host.setTheme({encoded});");
         }
+    }
+
+    public async Task SetEditorFontAsync(string fontFamily, int fontSize, int tabSize)
+    {
+        InitialFontFamily = fontFamily;
+        InitialFontSize   = fontSize;
+        InitialTabSize    = tabSize;
+        if (EditorView.CoreWebView2 == null || !_editorReady.Task.IsCompleted) return;
+        var family = JsonSerializer.Serialize(fontFamily);
+        await EditorView.CoreWebView2.ExecuteScriptAsync(
+            $"window.host.setFontOptions({family}, {fontSize}, {tabSize});");
     }
 
     public Task ToggleWordWrapAsync()

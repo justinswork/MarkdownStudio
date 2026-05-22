@@ -39,6 +39,12 @@
                           ToolTipService.ToolTip="Themes">
                 <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE790;" FontSize="16" />
             </ToggleButton>
+
+            <ToggleButton x:Name="SettingsBtn" Click="OnPaneClicked"
+                          Style="{StaticResource MdsRailToggleStyle}" Tag="settings"
+                          ToolTipService.ToolTip="Settings">
+                <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE713;" FontSize="16" />
+            </ToggleButton>
         </StackPanel>
     </Grid>
 </UserControl>

@@ -93,6 +93,32 @@ body.theme-solarized-dark .markdown-body h1,
 body.theme-solarized-dark .markdown-body h2         { border-bottom-color: #14546A; }
 
 /* ----- Common ----- */
+#link-hover-indicator {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  max-width: 60%;
+  padding: 4px 10px;
+  background: rgba(20, 20, 24, 0.92);
+  color: #f3f3f3;
+  font-family: "Segoe UI Variable Text", "Segoe UI", -apple-system, sans-serif;
+  font-size: 12px;
+  line-height: 18px;
+  border-top-right-radius: 4px;
+  pointer-events: none;
+  z-index: 9999;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+#link-hover-indicator.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .mermaid {
   text-align: center;
   margin: 16px 0;

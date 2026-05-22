@@ -5,7 +5,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 
 namespace MarkdownStudio.Views;
 
-public enum ActivityPane { None, Files, Search, Outline, Themes }
+public enum ActivityPane { None, Files, Search, Outline, Themes, Settings }
 
 public sealed partial class ActivityBar : UserControl
 {
@@ -31,10 +31,11 @@ public sealed partial class ActivityBar : UserControl
 
     private void SetChecks(ActivityPane active)
     {
-        FilesBtn.IsChecked   = active == ActivityPane.Files;
-        SearchBtn.IsChecked  = active == ActivityPane.Search;
-        OutlineBtn.IsChecked = active == ActivityPane.Outline;
-        ThemesBtn.IsChecked  = active == ActivityPane.Themes;
+        FilesBtn.IsChecked    = active == ActivityPane.Files;
+        SearchBtn.IsChecked   = active == ActivityPane.Search;
+        OutlineBtn.IsChecked  = active == ActivityPane.Outline;
+        ThemesBtn.IsChecked   = active == ActivityPane.Themes;
+        SettingsBtn.IsChecked = active == ActivityPane.Settings;
     }
 
     private void OnHomeClicked(object sender, RoutedEventArgs e) => HomeRequested?.Invoke();
@@ -44,11 +45,12 @@ public sealed partial class ActivityBar : UserControl
         if (sender is not ToggleButton t) return;
         var pane = (t.Tag as string) switch
         {
-            "files"   => ActivityPane.Files,
-            "search"  => ActivityPane.Search,
-            "outline" => ActivityPane.Outline,
-            "themes"  => ActivityPane.Themes,
-            _         => ActivityPane.None,
+            "files"    => ActivityPane.Files,
+            "search"   => ActivityPane.Search,
+            "outline"  => ActivityPane.Outline,
+            "themes"   => ActivityPane.Themes,
+            "settings" => ActivityPane.Settings,
+            _          => ActivityPane.None,
         };
 
         if (pane == _current)

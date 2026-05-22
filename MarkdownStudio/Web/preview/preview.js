@@ -88,6 +88,34 @@
     }
   }, true);
 
+  // Chrome-style URL hover hint in the bottom-left corner.
+  var hoverIndicator = document.getElementById('link-hover-indicator');
+  function findAnchor(el) {
+    while (el && el.nodeType === 1) {
+      if (el.tagName === 'A' && el.getAttribute('href')) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+  document.addEventListener('mouseover', function (e) {
+    var a = findAnchor(e.target);
+    if (!a || !hoverIndicator) return;
+    var href = a.getAttribute('href') || '';
+    if (!href || href.charAt(0) === '#') {
+      hoverIndicator.classList.remove('visible');
+      return;
+    }
+    hoverIndicator.textContent = href;
+    hoverIndicator.classList.add('visible');
+  }, true);
+  document.addEventListener('mouseout', function (e) {
+    var a = findAnchor(e.target);
+    if (!a || !hoverIndicator) return;
+    var to = findAnchor(e.relatedTarget);
+    if (to && to.getAttribute('href') === a.getAttribute('href')) return;
+    hoverIndicator.classList.remove('visible');
+  }, true);
+
   window.host = {
     render: render,
     setTheme: setTheme,

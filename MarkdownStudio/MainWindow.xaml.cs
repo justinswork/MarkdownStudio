@@ -20,6 +20,7 @@ public sealed partial class MainWindow : Window
 
     private readonly AppThemeService _appTheme = new();
     private readonly MruService _mru = new();
+    private readonly EditorPreferencesService _prefs = new();
     private readonly Dictionary<TabViewItem, EditorPaneControl> _panes = new();
 
     private readonly WelcomeView _welcomeView = new();
@@ -27,6 +28,7 @@ public sealed partial class MainWindow : Window
     private readonly SearchView _searchView = new();
     private readonly OutlineView _outlineView = new();
     private readonly ThemePickerView _themePickerView = new();
+    private readonly SettingsView _settingsView = new();
 
     private TabViewItem? _welcomeTab;
     private bool _focusMode;
@@ -65,7 +67,7 @@ public sealed partial class MainWindow : Window
         _welcomeView.Attach(_mru);
         _welcomeView.OpenFolderRequested += async () => await OpenFolderInteractiveAsync();
         _welcomeView.OpenFileRequested   += async () => await OpenFileInteractiveAsync();
-        _welcomeView.NewFileRequested    += () => AddEditorTab();
+        _welcomeView.NewFileRequested    += CreateBlankTab;
         _welcomeView.MruActivated        += OnMruActivated;
 
         _fileTreeView.OpenFolderRequested += async () => await OpenFolderInteractiveAsync();
@@ -80,6 +82,9 @@ public sealed partial class MainWindow : Window
 
         _themePickerView.ThemeSelected += t => _appTheme.Select(t);
         _themePickerView.SetSelected(_appTheme.Selected);
+
+        _settingsView.Attach(_prefs);
+        _prefs.Changed += p => DispatcherQueue.TryEnqueue(() => ApplyFontPrefs(p));
 
         ActivityRail.HomeRequested += ShowWelcomeTab;
         ActivityRail.PaneSelected  += SetSidebarPane;
@@ -112,6 +117,8 @@ public sealed partial class MainWindow : Window
         }
         catch { /* unsupported on some hardware */ }
 
+        ApplyCaptionButtonColors(effective);
+
         ThemeStatusText.Text = theme.DisplayName;
         _themePickerView.SetSelected(theme);
 
@@ -127,16 +134,54 @@ public sealed partial class MainWindow : Window
             b.Color = color;
     }
 
+    private void ApplyFontPrefs(EditorPreferences prefs)
+    {
+        foreach (var pane in _panes.Values)
+            _ = pane.SetEditorFontAsync(prefs.Font.CssFamily, prefs.FontSize, prefs.TabSize);
+    }
+
+    private void ApplyCaptionButtonColors(AppTheme effective)
+    {
+        try
+        {
+            var tb = AppWindow?.TitleBar;
+            if (tb == null) return;
+
+            // Background under the caption buttons stays transparent so Mica /
+            // theme background shows through.
+            tb.ButtonBackgroundColor         = Color.FromArgb(0, 0, 0, 0);
+            tb.ButtonInactiveBackgroundColor = Color.FromArgb(0, 0, 0, 0);
+
+            tb.ButtonForegroundColor         = effective.TextPrimary;
+            tb.ButtonInactiveForegroundColor = effective.TextSecondary;
+
+            // Subtle hover: 10% of the primary text colour so it's visible on
+            // every theme.
+            var hoverBg = Color.FromArgb(28, effective.TextPrimary.R,
+                                              effective.TextPrimary.G,
+                                              effective.TextPrimary.B);
+            var pressedBg = Color.FromArgb(48, effective.TextPrimary.R,
+                                                effective.TextPrimary.G,
+                                                effective.TextPrimary.B);
+            tb.ButtonHoverBackgroundColor   = hoverBg;
+            tb.ButtonHoverForegroundColor   = effective.TextPrimary;
+            tb.ButtonPressedBackgroundColor = pressedBg;
+            tb.ButtonPressedForegroundColor = effective.TextPrimary;
+        }
+        catch { /* AppWindow not ready or unsupported */ }
+    }
+
     // ---- Sidebar ----
     private void SetSidebarPane(ActivityPane pane)
     {
         UIElement? content = pane switch
         {
-            ActivityPane.Files   => _fileTreeView,
-            ActivityPane.Search  => _searchView,
-            ActivityPane.Outline => _outlineView,
-            ActivityPane.Themes  => _themePickerView,
-            _                    => null,
+            ActivityPane.Files    => _fileTreeView,
+            ActivityPane.Search   => _searchView,
+            ActivityPane.Outline  => _outlineView,
+            ActivityPane.Themes   => _themePickerView,
+            ActivityPane.Settings => _settingsView,
+            _                     => null,
         };
 
         if (content == null)
@@ -175,6 +220,9 @@ public sealed partial class MainWindow : Window
             Document = doc,
             MonacoTheme = _appTheme.EffectiveMonacoTheme,
             PreviewTheme = _appTheme.EffectivePreviewClass,
+            InitialFontFamily = _prefs.Preferences.Font.CssFamily,
+            InitialFontSize   = _prefs.Preferences.FontSize,
+            InitialTabSize    = _prefs.Preferences.TabSize,
         };
         // New tab inherits the current view mode (Editor / Split / Preview).
         _ = pane.SetLayoutAsync(ModeToLayout(ModeControl.Mode));
@@ -307,7 +355,7 @@ public sealed partial class MainWindow : Window
     }
 
     // ---- Menu / button handlers ----
-    private void OnNew(object sender, RoutedEventArgs e) => AddEditorTab();
+    private void OnNew(object sender, RoutedEventArgs e) => CreateBlankTab();
     private async void OnOpenFile(object sender, RoutedEventArgs e)   => await OpenFileInteractiveAsync();
     private async void OnOpenFolder(object sender, RoutedEventArgs e) => await OpenFolderInteractiveAsync();
     private async void OnSave(object sender, RoutedEventArgs e)       => await SaveCurrentAsync(saveAs: false);
@@ -419,7 +467,18 @@ public sealed partial class MainWindow : Window
         if (Tabs.TabItems.Count == 0) ShowWelcomeTab();
     }
 
-    private void Tabs_AddTabButtonClick(TabView sender, object args) => AddEditorTab();
+    private void Tabs_AddTabButtonClick(TabView sender, object args) => CreateBlankTab();
+
+    private void CreateBlankTab()
+    {
+        // A blank document has nothing to preview, so always open in Editor mode.
+        if (ModeControl.Mode != EditorMode.Editor)
+        {
+            ModeControl.Mode = EditorMode.Editor;
+            OnModeChanged(EditorMode.Editor);
+        }
+        AddEditorTab();
+    }
 
     private void Tabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

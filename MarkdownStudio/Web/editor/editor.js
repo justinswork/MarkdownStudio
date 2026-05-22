@@ -9,9 +9,16 @@
     }
   }
 
-  function getThemeFromQuery() {
+  function getQueryParams() {
     var params = new URLSearchParams(window.location.search);
-    return params.get('theme') || 'ms-daylight';
+    var size = parseInt(params.get('size'), 10);
+    var tab  = parseInt(params.get('tab'),  10);
+    return {
+      theme:  params.get('theme')  || 'ms-daylight',
+      family: params.get('family') || "Cascadia Code, Consolas, 'Courier New', monospace",
+      size:   isNaN(size) ? 14 : size,
+      tab:    isNaN(tab)  ? 2  : tab,
+    };
   }
 
   require.config({ paths: { vs: './monaco/vs' } });
@@ -80,21 +87,21 @@
       },
     });
 
-    var theme = getThemeFromQuery();
+    var q = getQueryParams();
 
     var editor = monaco.editor.create(document.getElementById('container'), {
       value: '',
       language: 'markdown',
-      theme: theme,
+      theme: q.theme,
       automaticLayout: true,
       wordWrap: 'on',
       wrappingIndent: 'same',
       minimap: { enabled: true, renderCharacters: false },
       lineNumbers: 'on',
       renderWhitespace: 'selection',
-      fontSize: 14,
-      lineHeight: 22,
-      fontFamily: "Cascadia Code, Consolas, 'Courier New', monospace",
+      fontSize: q.size,
+      lineHeight: Math.round(q.size * 1.55),
+      fontFamily: q.family,
       fontLigatures: true,
       smoothScrolling: true,
       cursorBlinking: 'smooth',
@@ -103,7 +110,7 @@
       guides: { bracketPairs: true, indentation: true },
       formatOnPaste: true,
       formatOnType: true,
-      tabSize: 2,
+      tabSize: q.tab,
       insertSpaces: true,
       padding: { top: 16, bottom: 16 },
       scrollBeyondLastLine: false,
@@ -159,6 +166,13 @@
       getText: function () { return editor.getValue(); },
       setTheme: function (themeName) { monaco.editor.setTheme(themeName); },
       setWordWrap: function (enabled) { editor.updateOptions({ wordWrap: enabled ? 'on' : 'off' }); },
+      setFontOptions: function (family, size, tabSize) {
+        var opts = {};
+        if (family) opts.fontFamily = family;
+        if (size)   { opts.fontSize = size; opts.lineHeight = Math.round(size * 1.55); }
+        if (tabSize) opts.tabSize = tabSize;
+        editor.updateOptions(opts);
+      },
       revealLine: function (lineNumber) {
         try {
           editor.revealLineInCenter(lineNumber);
