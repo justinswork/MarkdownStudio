@@ -30,11 +30,18 @@ public sealed partial class MainWindow : Window
     private readonly ThemePickerView _themePickerView = new();
     private readonly SettingsView _settingsView = new();
 
+    private const string DefaultAppPromptKey = "defaultAppPromptShown.v1";
+
     private TabViewItem? _welcomeTab;
     private bool _focusMode;
+    private readonly IReadOnlyList<string> _startupFiles;
 
-    public MainWindow()
+    public MainWindow() : this(null) { }
+
+    public MainWindow(IReadOnlyList<string>? startupFiles)
     {
+        _startupFiles = startupFiles ?? Array.Empty<string>();
+
         InitializeComponent();
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -49,6 +56,18 @@ public sealed partial class MainWindow : Window
 
         SetSidebarPane(ActivityPane.None);
         ShowWelcomeTab();
+
+        // After the window's XAML root is wired up, open any files we were
+        // activated with and (on first run) offer to make us the default app.
+        RootGrid.Loaded += async (_, _) =>
+        {
+            foreach (var path in _startupFiles)
+            {
+                try { await OpenFileFromPathAsync(path); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Startup open failed: {ex.Message}"); }
+            }
+            await PromptForDefaultAppAsync();
+        };
     }
 
     private static EditorMode LoadSavedMode()
@@ -455,6 +474,36 @@ public sealed partial class MainWindow : Window
     private async void OnAbout(object sender, RoutedEventArgs e) =>
         await ShowMessageAsync("Markdown Studio",
             "A premium native markdown editor for Windows.\nBuilt with WinUI 3 and .NET 10.");
+
+    private async Task PromptForDefaultAppAsync()
+    {
+        var values = Windows.Storage.ApplicationData.Current.LocalSettings.Values;
+        if (values[DefaultAppPromptKey] is bool shown && shown) return;
+        // Mark as shown up front so we never re-prompt even if the dialog
+        // throws or the user closes the window mid-prompt.
+        values[DefaultAppPromptKey] = true;
+
+        var dialog = new ContentDialog
+        {
+            Title = "Make Markdown Studio your default?",
+            Content = "Open Markdown files from File Explorer with a single click. " +
+                      "We'll take you to Windows Settings → Default apps where you can pick Markdown Studio for .md and other Markdown extensions.",
+            PrimaryButtonText = "Open Settings",
+            SecondaryButtonText = "Maybe later",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = RootGrid.XamlRoot,
+        };
+
+        ContentDialogResult result;
+        try { result = await dialog.ShowAsync(); }
+        catch { return; }
+
+        if (result == ContentDialogResult.Primary)
+        {
+            try { await Windows.System.Launcher.LaunchUriAsync(new Uri("ms-settings:defaultapps")); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Launch settings failed: {ex.Message}"); }
+        }
+    }
 
     private async Task ShowMessageAsync(string title, string message)
     {
