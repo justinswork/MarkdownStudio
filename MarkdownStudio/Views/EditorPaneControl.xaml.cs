@@ -61,10 +61,20 @@ public sealed partial class EditorPaneControl : UserControl
         PreviewView.CoreWebView2.SetVirtualHostNameToFolderMapping(
             VirtualHost, webRoot, CoreWebView2HostResourceAccessKind.Allow);
 
+#if DEBUG
         EditorView.CoreWebView2.Settings.AreDevToolsEnabled = true;
         PreviewView.CoreWebView2.Settings.AreDevToolsEnabled = true;
+#else
+        EditorView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+        PreviewView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+#endif
         EditorView.CoreWebView2.Settings.IsStatusBarEnabled = false;
         PreviewView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+        // Suppress Chromium's default right-click menu ("Copy link to highlight",
+        // "Inspect", etc.). Monaco renders its own context menu in the editor;
+        // the preview is a read-only renderer where keyboard copy is enough.
+        EditorView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+        PreviewView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
 
         EditorView.WebMessageReceived += OnEditorWebMessage;
         PreviewView.WebMessageReceived += OnPreviewWebMessage;
