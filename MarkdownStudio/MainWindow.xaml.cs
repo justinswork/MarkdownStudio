@@ -500,6 +500,7 @@ public sealed partial class MainWindow : Window
         {
             ActiveContent.Content = null;
             DocInfoText.Text = string.Empty;
+            _outlineView.SetNodes(Array.Empty<OutlineNode>());
             return;
         }
 
@@ -508,6 +509,7 @@ public sealed partial class MainWindow : Window
             ActiveContent.Content = _welcomeView;
             DocInfoText.Text = "Welcome";
             TopToolbar.Visibility = Visibility.Collapsed;
+            _outlineView.SetNodes(Array.Empty<OutlineNode>());
             return;
         }
 
