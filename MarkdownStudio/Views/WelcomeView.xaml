@@ -81,7 +81,7 @@
                     <ItemsControl x:Name="RecentFoldersList" ItemsSource="{x:Bind RecentFolders, Mode=OneWay}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:MruEntry">
-                                <Button Click="OnMruClicked" DataContext="{x:Bind}"
+                                <Button Click="OnMruClicked" Tag="{x:Bind}"
                                         Style="{StaticResource MdsMruItemStyle}">
                                     <Grid ColumnSpacing="14">
                                         <Grid.ColumnDefinitions>
@@ -127,7 +127,7 @@
                     <ItemsControl x:Name="RecentFilesList" ItemsSource="{x:Bind RecentFiles, Mode=OneWay}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:MruEntry">
-                                <Button Click="OnMruClicked" DataContext="{x:Bind}"
+                                <Button Click="OnMruClicked" Tag="{x:Bind}"
                                         Style="{StaticResource MdsMruItemStyle}">
                                     <Grid ColumnSpacing="14">
                                         <Grid.ColumnDefinitions>

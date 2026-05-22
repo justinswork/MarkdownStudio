@@ -53,7 +53,7 @@ public sealed partial class WelcomeView : UserControl
 
     private void OnMruClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { DataContext: MruEntry entry })
+        if (sender is Button { Tag: MruEntry entry })
             MruActivated?.Invoke(entry);
     }
 
