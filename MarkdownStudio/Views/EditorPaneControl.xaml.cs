@@ -108,6 +108,10 @@ public sealed partial class EditorPaneControl : UserControl
                     TextChanged?.Invoke(text);
                     _ = PushToPreviewAsync(text);
                     break;
+                case "scrolled":
+                    var editorLine = root.GetProperty("line").GetInt32();
+                    _ = SyncPreviewScrollAsync(editorLine);
+                    break;
                 case "toggleFocus":
                     FocusToggleRequested?.Invoke();
                     break;
@@ -138,6 +142,10 @@ public sealed partial class EditorPaneControl : UserControl
                     if (!string.IsNullOrWhiteSpace(url))
                         _ = Windows.System.Launcher.LaunchUriAsync(new Uri(url));
                     break;
+                case "scrolled":
+                    var previewLine = root.GetProperty("line").GetInt32();
+                    _ = SyncEditorScrollAsync(previewLine);
+                    break;
                 case "toggleFocus":
                     FocusToggleRequested?.Invoke();
                     break;
@@ -147,6 +155,18 @@ public sealed partial class EditorPaneControl : UserControl
         {
             System.Diagnostics.Debug.WriteLine($"Preview message error: {ex}");
         }
+    }
+
+    private async Task SyncPreviewScrollAsync(int line)
+    {
+        if (PreviewView.CoreWebView2 == null || !_previewReady.Task.IsCompleted) return;
+        await PreviewView.CoreWebView2.ExecuteScriptAsync($"window.host.scrollToLine({line});");
+    }
+
+    private async Task SyncEditorScrollAsync(int line)
+    {
+        if (EditorView.CoreWebView2 == null || !_editorReady.Task.IsCompleted) return;
+        await EditorView.CoreWebView2.ExecuteScriptAsync($"window.host.scrollToLine({line});");
     }
 
     private async Task OnEditorReadyAsync()

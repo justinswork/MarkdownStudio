@@ -130,6 +130,20 @@
       }, 80);
     });
 
+    // Scroll-sync: notify host of editor scrolls so it can mirror in preview.
+    var lastSyncIn = 0;
+    var SYNC_LOCK_MS = 220;
+    var scrollDebounce = null;
+    editor.onDidScrollChange(function () {
+      if (Date.now() - lastSyncIn < SYNC_LOCK_MS) return;
+      if (scrollDebounce) clearTimeout(scrollDebounce);
+      scrollDebounce = setTimeout(function () {
+        var ranges = editor.getVisibleRanges();
+        if (!ranges || !ranges.length) return;
+        postToHost({ type: 'scrolled', line: ranges[0].startLineNumber });
+      }, 20);
+    });
+
     function wrapSelection(ed, before, after) {
       var sel = ed.getSelection();
       var model = ed.getModel();
@@ -201,6 +215,13 @@
         } catch (_) {}
       },
       focus: function () { editor.focus(); },
+      scrollToLine: function (line) {
+        try {
+          lastSyncIn = Date.now();
+          var top = editor.getTopForLineNumber(line);
+          editor.setScrollTop(top, 1 /* Immediate */);
+        } catch (_) {}
+      },
     };
 
     // Forward F11 to the host so distraction-free mode toggles even when the
