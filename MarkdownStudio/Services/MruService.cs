@@ -42,7 +42,13 @@ public sealed class MruService
         {
             ApplicationData.Current.LocalSettings.Values[SettingsKey] = JsonSerializer.Serialize(_entries);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // LocalSettings caps each value at 8 KB. If we ever blow past that
+            // (e.g. by accidentally serializing computed UI helpers, as before),
+            // log so the regression is visible instead of failing silently.
+            System.Diagnostics.Debug.WriteLine($"MRU save failed: {ex.Message}");
+        }
     }
 
     public IReadOnlyList<MruEntry> Entries

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.Json.Serialization;
 
 namespace MarkdownStudio.Models;
 
@@ -12,25 +13,32 @@ public sealed class MruEntry
     public DateTimeOffset LastOpened { get; set; }
     public bool IsPinned { get; set; }
 
+    [JsonIgnore]
     public string DisplayName =>
         Kind == MruKind.Folder
             ? new DirectoryInfo(Path).Name
             : System.IO.Path.GetFileName(Path);
 
+    [JsonIgnore]
     public string ParentLocation =>
         Kind == MruKind.Folder
             ? new DirectoryInfo(Path).Parent?.FullName ?? Path
             : System.IO.Path.GetDirectoryName(Path) ?? Path;
 
     // Segoe Fluent Icons: FolderHorizontal (E8B7) for folders, Document (E8A5) for files.
+    [JsonIgnore]
     public string Glyph => Kind == MruKind.Folder ? "" : "";
 
+    [JsonIgnore]
     public string PinMenuText => IsPinned ? "Unpin" : "Pin to top";
+    [JsonIgnore]
     public string PinMenuGlyph => "";
 
+    [JsonIgnore]
     public Microsoft.UI.Xaml.Visibility PinIndicatorVisibility =>
         IsPinned ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
 
+    [JsonIgnore]
     public string RelativeWhen
     {
         get
