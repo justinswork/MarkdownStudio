@@ -47,6 +47,7 @@ public sealed partial class SettingsView : UserControl
             FontSizeText.Text    = $"{prefs.FontSize} pt";
             TabSizeSlider.Value  = prefs.TabSize;
             TabSizeText.Text     = $"{prefs.TabSize} space" + (prefs.TabSize == 1 ? "" : "s");
+            WhitespaceToggle.IsOn = prefs.ShowWhitespace;
 
             UpdatePreviewFont(prefs);
         }
@@ -80,5 +81,11 @@ public sealed partial class SettingsView : UserControl
         var tab = (int)Math.Round(e.NewValue);
         TabSizeText.Text = $"{tab} space" + (tab == 1 ? "" : "s");
         _service.SetTabSize(tab);
+    }
+
+    private void OnWhitespaceToggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressEvents || _service == null) return;
+        if (sender is ToggleSwitch t) _service.SetShowWhitespace(t.IsOn);
     }
 }

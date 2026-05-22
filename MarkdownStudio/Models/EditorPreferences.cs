@@ -33,9 +33,10 @@ public static class FontPresets
 
 public sealed class EditorPreferences
 {
-    public string FontPresetId { get; set; } = FontPresets.Default.Id;
-    public int    FontSize     { get; set; } = 14;
-    public int    TabSize      { get; set; } = 2;
+    public string FontPresetId   { get; set; } = FontPresets.Default.Id;
+    public int    FontSize       { get; set; } = 14;
+    public int    TabSize        { get; set; } = 2;
+    public bool   ShowWhitespace { get; set; }
 
     public FontPreset Font => FontPresets.ById(FontPresetId);
 }

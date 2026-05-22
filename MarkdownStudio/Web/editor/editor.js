@@ -18,6 +18,7 @@
       family: params.get('family') || "Cascadia Code, Consolas, 'Courier New', monospace",
       size:   isNaN(size) ? 14 : size,
       tab:    isNaN(tab)  ? 2  : tab,
+      ws:     params.get('ws') === '1',
     };
   }
 
@@ -98,7 +99,7 @@
       wrappingIndent: 'same',
       minimap: { enabled: true, renderCharacters: false },
       lineNumbers: 'on',
-      renderWhitespace: 'selection',
+      renderWhitespace: q.ws ? 'all' : 'selection',
       fontSize: q.size,
       lineHeight: Math.round(q.size * 1.55),
       fontFamily: q.family,
@@ -112,11 +113,22 @@
       formatOnType: true,
       tabSize: q.tab,
       insertSpaces: true,
+      detectIndentation: false,
       padding: { top: 16, bottom: 16 },
       scrollBeyondLastLine: false,
       'semanticHighlighting.enabled': true,
       'unicodeHighlight.ambiguousCharacters': false,
     });
+
+    // Apply tabSize to the model explicitly. editor.create accepts it but
+    // detectIndentation: false also disables the auto-detect pass that
+    // would normally seed this — set it ourselves so it actually sticks.
+    var currentTabSize = q.tab;
+    function applyTabSize(size) {
+      var model = editor.getModel();
+      if (model) model.updateOptions({ tabSize: size, insertSpaces: true });
+    }
+    applyTabSize(currentTabSize);
 
     var lastSent = '';
     var debounceTimer = null;
@@ -176,7 +188,12 @@
     });
 
     window.host = {
-      setText: function (text) { lastSent = text; editor.setValue(text); },
+      setText: function (text) {
+        lastSent = text;
+        editor.setValue(text);
+        // setValue can reset model options on some Monaco versions; reapply.
+        applyTabSize(currentTabSize);
+      },
       getText: function () { return editor.getValue(); },
       setTheme: function (themeName) { monaco.editor.setTheme(themeName); },
       setWordWrap: function (enabled) { editor.updateOptions({ wordWrap: enabled ? 'on' : 'off' }); },
@@ -184,8 +201,14 @@
         var opts = {};
         if (family) opts.fontFamily = family;
         if (size)   { opts.fontSize = size; opts.lineHeight = Math.round(size * 1.55); }
-        if (tabSize) opts.tabSize = tabSize;
         editor.updateOptions(opts);
+        if (tabSize) {
+          currentTabSize = tabSize;
+          applyTabSize(tabSize);
+        }
+      },
+      setRenderWhitespace: function (showAll) {
+        editor.updateOptions({ renderWhitespace: showAll ? 'all' : 'selection' });
       },
       revealLine: function (lineNumber, query) {
         try {

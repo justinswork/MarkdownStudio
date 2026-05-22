@@ -30,9 +30,10 @@ public sealed partial class EditorPaneControl : UserControl
     public DocumentTab? Document { get; set; }
     public string MonacoTheme { get; set; } = "ms-daylight";
     public string PreviewTheme { get; set; } = "theme-daylight";
-    public string InitialFontFamily { get; set; } = "";
-    public int    InitialFontSize   { get; set; } = 14;
-    public int    InitialTabSize    { get; set; } = 2;
+    public string InitialFontFamily    { get; set; } = "";
+    public int    InitialFontSize      { get; set; } = 14;
+    public int    InitialTabSize       { get; set; } = 2;
+    public bool   InitialShowWhitespace { get; set; }
 
     public event Action<string>? TextChanged;
     public event Action?         FocusToggleRequested;
@@ -87,6 +88,7 @@ public sealed partial class EditorPaneControl : UserControl
             $"theme={Uri.EscapeDataString(MonacoTheme)}",
             $"size={InitialFontSize}",
             $"tab={InitialTabSize}",
+            $"ws={(InitialShowWhitespace ? 1 : 0)}",
         };
         if (!string.IsNullOrEmpty(InitialFontFamily))
             editorQueryParts.Add($"family={Uri.EscapeDataString(InitialFontFamily)}");
@@ -296,6 +298,13 @@ public sealed partial class EditorPaneControl : UserControl
         var family = JsonSerializer.Serialize(fontFamily);
         await EditorView.CoreWebView2.ExecuteScriptAsync(
             $"window.host.setFontOptions({family}, {fontSize}, {tabSize});");
+    }
+
+    public async Task SetRenderWhitespaceAsync(bool show)
+    {
+        if (EditorView.CoreWebView2 == null || !_editorReady.Task.IsCompleted) return;
+        await EditorView.CoreWebView2.ExecuteScriptAsync(
+            $"window.host.setRenderWhitespace({(show ? "true" : "false")});");
     }
 
     public Task ToggleWordWrapAsync()

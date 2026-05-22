@@ -137,7 +137,10 @@ public sealed partial class MainWindow : Window
     private void ApplyFontPrefs(EditorPreferences prefs)
     {
         foreach (var pane in _panes.Values)
+        {
             _ = pane.SetEditorFontAsync(prefs.Font.CssFamily, prefs.FontSize, prefs.TabSize);
+            _ = pane.SetRenderWhitespaceAsync(prefs.ShowWhitespace);
+        }
     }
 
     private void ApplyCaptionButtonColors(AppTheme effective)
@@ -220,9 +223,10 @@ public sealed partial class MainWindow : Window
             Document = doc,
             MonacoTheme = _appTheme.EffectiveMonacoTheme,
             PreviewTheme = _appTheme.EffectivePreviewClass,
-            InitialFontFamily = _prefs.Preferences.Font.CssFamily,
-            InitialFontSize   = _prefs.Preferences.FontSize,
-            InitialTabSize    = _prefs.Preferences.TabSize,
+            InitialFontFamily     = _prefs.Preferences.Font.CssFamily,
+            InitialFontSize       = _prefs.Preferences.FontSize,
+            InitialTabSize        = _prefs.Preferences.TabSize,
+            InitialShowWhitespace = _prefs.Preferences.ShowWhitespace,
         };
         // New tab inherits the current view mode (Editor / Split / Preview).
         _ = pane.SetLayoutAsync(ModeToLayout(ModeControl.Mode));

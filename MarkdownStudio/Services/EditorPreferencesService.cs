@@ -6,9 +6,10 @@ namespace MarkdownStudio.Services;
 
 public sealed class EditorPreferencesService
 {
-    private const string FontPresetKey = "editor.fontPreset.v1";
-    private const string FontSizeKey   = "editor.fontSize.v1";
-    private const string TabSizeKey    = "editor.tabSize.v1";
+    private const string FontPresetKey     = "editor.fontPreset.v1";
+    private const string FontSizeKey       = "editor.fontSize.v1";
+    private const string TabSizeKey        = "editor.tabSize.v1";
+    private const string ShowWhitespaceKey = "editor.showWhitespace.v1";
 
     private readonly EditorPreferences _prefs;
 
@@ -25,9 +26,10 @@ public sealed class EditorPreferencesService
     {
         var values = ApplicationData.Current.LocalSettings.Values;
         var prefs = new EditorPreferences();
-        if (values[FontPresetKey] is string id   && !string.IsNullOrEmpty(id)) prefs.FontPresetId = id;
-        if (values[FontSizeKey]   is int    size && size > 0)                  prefs.FontSize     = Clamp(size, 10, 28);
-        if (values[TabSizeKey]    is int    tab  && tab  > 0)                  prefs.TabSize      = Clamp(tab,  1, 8);
+        if (values[FontPresetKey]     is string id   && !string.IsNullOrEmpty(id)) prefs.FontPresetId   = id;
+        if (values[FontSizeKey]       is int    size && size > 0)                  prefs.FontSize       = Clamp(size, 10, 28);
+        if (values[TabSizeKey]        is int    tab  && tab  > 0)                  prefs.TabSize        = Clamp(tab,  1, 8);
+        if (values[ShowWhitespaceKey] is bool   ws)                                prefs.ShowWhitespace = ws;
         return prefs;
     }
 
@@ -54,6 +56,14 @@ public sealed class EditorPreferencesService
         if (_prefs.TabSize == tab) return;
         _prefs.TabSize = tab;
         ApplicationData.Current.LocalSettings.Values[TabSizeKey] = tab;
+        Changed?.Invoke(_prefs);
+    }
+
+    public void SetShowWhitespace(bool show)
+    {
+        if (_prefs.ShowWhitespace == show) return;
+        _prefs.ShowWhitespace = show;
+        ApplicationData.Current.LocalSettings.Values[ShowWhitespaceKey] = show;
         Changed?.Invoke(_prefs);
     }
 

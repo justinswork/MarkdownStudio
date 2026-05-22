@@ -64,6 +64,14 @@
                             ValueChanged="OnTabSizeChanged" />
                 </StackPanel>
 
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource MdsBodyStrongStyle}" Text="Show whitespace" />
+                    <TextBlock Style="{StaticResource MdsCaptionStyle}" TextWrapping="Wrap"
+                               Text="Render spaces and tabs as visible characters in the editor." />
+                    <ToggleSwitch x:Name="WhitespaceToggle" Toggled="OnWhitespaceToggled"
+                                  OffContent="Off" OnContent="On" />
+                </StackPanel>
+
                 <Border BorderBrush="{ThemeResource MdsBorderBrush}" BorderThickness="0,1,0,0" Margin="0,8,0,0" />
 
                 <StackPanel Spacing="4">
