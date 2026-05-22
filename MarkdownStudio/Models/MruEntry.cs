@@ -21,6 +21,9 @@ public sealed class MruEntry
             ? new DirectoryInfo(Path).Parent?.FullName ?? Path
             : System.IO.Path.GetDirectoryName(Path) ?? Path;
 
+    // Segoe Fluent Icons: FolderHorizontal (E8B7) for folders, Document (E8A5) for files.
+    public string Glyph => Kind == MruKind.Folder ? "" : "";
+
     public string RelativeWhen
     {
         get
