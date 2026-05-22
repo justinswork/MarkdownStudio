@@ -22,6 +22,12 @@
                 <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8B7;" FontSize="16" />
             </ToggleButton>
 
+            <ToggleButton x:Name="SearchBtn" Click="OnPaneClicked"
+                          Style="{StaticResource MdsRailToggleStyle}" Tag="search"
+                          ToolTipService.ToolTip="Search (Ctrl+Shift+F)">
+                <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE721;" FontSize="16" />
+            </ToggleButton>
+
             <ToggleButton x:Name="OutlineBtn" Click="OnPaneClicked"
                           Style="{StaticResource MdsRailToggleStyle}" Tag="outline"
                           ToolTipService.ToolTip="Outline (Ctrl+Shift+O)">

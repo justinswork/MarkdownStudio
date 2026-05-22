@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using MarkdownStudio.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 
 namespace MarkdownStudio.Views;
 
@@ -34,7 +35,19 @@ public sealed partial class OutlineView : UserControl
 
     private void OnItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
     {
+        // Fires for leaf nodes; for parent nodes a single click expands instead.
         if (args.InvokedItem is OutlineNode node)
             HeadingActivated?.Invoke(node);
+    }
+
+    private void OnTitleTapped(object sender, TappedRoutedEventArgs e)
+    {
+        // Clicking the heading text always navigates, even for nodes with children.
+        // (The chevron still expands.)
+        if (sender is FrameworkElement fe && fe.Tag is OutlineNode node)
+        {
+            HeadingActivated?.Invoke(node);
+            e.Handled = true;
+        }
     }
 }

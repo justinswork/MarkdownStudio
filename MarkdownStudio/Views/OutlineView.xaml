@@ -25,7 +25,8 @@
                     <DataTemplate x:DataType="models:OutlineNode">
                         <TreeViewItem ItemsSource="{x:Bind Children}">
                             <TextBlock Text="{x:Bind Title}" Style="{StaticResource MdsBodyStyle}"
-                                       TextTrimming="CharacterEllipsis" />
+                                       TextTrimming="CharacterEllipsis"
+                                       Tag="{x:Bind}" Tapped="OnTitleTapped" />
                         </TreeViewItem>
                     </DataTemplate>
                 </TreeView.ItemTemplate>

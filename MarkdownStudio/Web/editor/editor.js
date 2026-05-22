@@ -169,6 +169,16 @@
       focus: function () { editor.focus(); },
     };
 
+    // Forward F11 to the host so distraction-free mode toggles even when the
+    // WebView2 has focus (WebView2 otherwise swallows the key).
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'F11') {
+        e.preventDefault();
+        e.stopPropagation();
+        postToHost({ type: 'toggleFocus' });
+      }
+    }, true);
+
     postToHost({ type: 'ready' });
     editor.focus();
   });

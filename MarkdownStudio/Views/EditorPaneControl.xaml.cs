@@ -31,6 +31,7 @@ public sealed partial class EditorPaneControl : UserControl
     public string PreviewTheme { get; set; } = "theme-daylight";
 
     public event Action<string>? TextChanged;
+    public event Action?         FocusToggleRequested;
 
     public EditorPaneControl()
     {
@@ -96,6 +97,9 @@ public sealed partial class EditorPaneControl : UserControl
                     TextChanged?.Invoke(text);
                     _ = PushToPreviewAsync(text);
                     break;
+                case "toggleFocus":
+                    FocusToggleRequested?.Invoke();
+                    break;
             }
         }
         catch (Exception ex)
@@ -122,6 +126,9 @@ public sealed partial class EditorPaneControl : UserControl
                     var url = root.GetProperty("url").GetString();
                     if (!string.IsNullOrWhiteSpace(url))
                         _ = Windows.System.Launcher.LaunchUriAsync(new Uri(url));
+                    break;
+                case "toggleFocus":
+                    FocusToggleRequested?.Invoke();
                     break;
             }
         }

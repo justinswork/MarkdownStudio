@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="MarkdownStudio.Views.SearchView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:MarkdownStudio.Models">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Padding="16,14,16,12" Spacing="8">
+            <TextBlock Style="{StaticResource MdsSidebarTitleStyle}" Text="SEARCH" />
+            <TextBox x:Name="QueryBox" PlaceholderText="Search files and content"
+                     TextChanged="OnQueryTextChanged" />
+            <TextBlock x:Name="ScopeText" Style="{StaticResource MdsCaptionStyle}"
+                       Text="Open a folder to enable search." />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Padding="16,0,16,8">
+            <ProgressRing x:Name="Spinner" Width="14" Height="14" IsActive="False" />
+            <TextBlock x:Name="StatusText" Style="{StaticResource MdsCaptionStyle}"
+                       VerticalAlignment="Center" Text="" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="8,0,8,12">
+            <ItemsControl x:Name="ResultsList" ItemsSource="{x:Bind Groups, Mode=OneWay}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:SearchGroup">
+                        <StackPanel Margin="4,4,4,10" Spacing="2">
+                            <Grid Padding="8,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Grid.Column="0" Glyph="&#xE8A5;" FontSize="14"
+                                          Foreground="{ThemeResource MdsTextSecondaryBrush}"
+                                          Margin="0,0,8,0" />
+                                <TextBlock Grid.Column="1" Style="{StaticResource MdsBodyStrongStyle}"
+                                           Text="{x:Bind RelativePath}"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="2" Style="{StaticResource MdsCaptionStyle}"
+                                           Text="{x:Bind CountLabel}" Margin="8,0,0,0" />
+                            </Grid>
+                            <ItemsControl ItemsSource="{x:Bind Hits}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:SearchHit">
+                                        <Button Click="OnHitClicked" Tag="{x:Bind}"
+                                                Style="{StaticResource MdsMruItemStyle}"
+                                                Margin="20,0,0,0">
+                                            <StackPanel Spacing="0">
+                                                <TextBlock Style="{StaticResource MdsBodyStyle}"
+                                                           Text="{x:Bind DisplayLabel}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           TextWrapping="NoWrap" />
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <Grid Grid.Row="2" x:Name="EmptyState" Visibility="Visible" Padding="24">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" MaxWidth="240">
+                <FontIcon Glyph="&#xE721;" FontSize="28"
+                          Foreground="{ThemeResource MdsTextSecondaryBrush}" />
+                <TextBlock x:Name="EmptyHint" Style="{StaticResource MdsBodyStyle}" TextAlignment="Center"
+                           Text="Type to search file names and content." />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

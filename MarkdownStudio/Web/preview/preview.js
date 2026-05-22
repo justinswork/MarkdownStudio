@@ -93,5 +93,15 @@
     setTheme: setTheme,
   };
 
+  // Forward F11 to the host so distraction-free mode toggles even when the
+  // preview WebView2 has focus.
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'F11') {
+      e.preventDefault();
+      e.stopPropagation();
+      postToHost({ type: 'toggleFocus' });
+    }
+  }, true);
+
   postToHost({ type: 'ready' });
 })();

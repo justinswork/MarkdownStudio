@@ -16,6 +16,7 @@ namespace MarkdownStudio;
 public sealed partial class MainWindow : Window
 {
     private const string WelcomeTabId = "welcome";
+    private const string ViewModeKey  = "viewMode.v1";
 
     private readonly AppThemeService _appTheme = new();
     private readonly MruService _mru = new();
@@ -23,6 +24,7 @@ public sealed partial class MainWindow : Window
 
     private readonly WelcomeView _welcomeView = new();
     private readonly FileTreeView _fileTreeView = new();
+    private readonly SearchView _searchView = new();
     private readonly OutlineView _outlineView = new();
     private readonly ThemePickerView _themePickerView = new();
 
@@ -40,8 +42,22 @@ public sealed partial class MainWindow : Window
         _appTheme.Changed += t => DispatcherQueue.TryEnqueue(() => ApplyTheme(t));
         ApplyTheme(_appTheme.Selected);
 
+        // Restore the saved view mode before any tabs are created.
+        ModeControl.Mode = LoadSavedMode();
+
         SetSidebarPane(ActivityPane.None);
         ShowWelcomeTab();
+    }
+
+    private static EditorMode LoadSavedMode()
+    {
+        var raw = Windows.Storage.ApplicationData.Current.LocalSettings.Values[ViewModeKey] as string;
+        return Enum.TryParse<EditorMode>(raw, out var m) ? m : EditorMode.Split;
+    }
+
+    private static void SaveMode(EditorMode mode)
+    {
+        Windows.Storage.ApplicationData.Current.LocalSettings.Values[ViewModeKey] = mode.ToString();
     }
 
     private void WireUpViews()
@@ -54,6 +70,8 @@ public sealed partial class MainWindow : Window
 
         _fileTreeView.OpenFolderRequested += async () => await OpenFolderInteractiveAsync();
         _fileTreeView.FileOpenRequested   += async path => await OpenFileFromPathAsync(path);
+
+        _searchView.HitActivated += hit => _ = OpenFileAtLineAsync(hit.FilePath, hit.LineNumber);
 
         _outlineView.HeadingActivated += node =>
         {
@@ -115,6 +133,7 @@ public sealed partial class MainWindow : Window
         UIElement? content = pane switch
         {
             ActivityPane.Files   => _fileTreeView,
+            ActivityPane.Search  => _searchView,
             ActivityPane.Outline => _outlineView,
             ActivityPane.Themes  => _themePickerView,
             _                    => null,
@@ -164,6 +183,7 @@ public sealed partial class MainWindow : Window
             if (CurrentPane == pane)
                 _outlineView.SetNodes(OutlineService.Parse(text));
         });
+        pane.FocusToggleRequested += () => DispatcherQueue.TryEnqueue(ToggleFocusMode);
 
         var tab = new TabViewItem
         {
@@ -206,6 +226,7 @@ public sealed partial class MainWindow : Window
         var layout = ModeToLayout(mode);
         foreach (var pane in _panes.Values)
             _ = pane.SetLayoutAsync(layout);
+        SaveMode(mode);
     }
 
     // ---- File operations ----
@@ -257,10 +278,18 @@ public sealed partial class MainWindow : Window
     private void OpenFolder(string path)
     {
         _fileTreeView.FolderPath = path;
+        _searchView.FolderPath   = path;
         _mru.Touch(path, MruKind.Folder);
         ActivityRail.CurrentPane = ActivityPane.Files;
         SetSidebarPane(ActivityPane.Files);
         StatusText.Text = $"Folder: {path}";
+    }
+
+    private async Task OpenFileAtLineAsync(string path, int lineNumber)
+    {
+        await OpenFileFromPathAsync(path);
+        if (lineNumber > 0 && CurrentPane is { } pane)
+            await pane.RevealLineAsync(lineNumber);
     }
 
     private void OnMruActivated(MruEntry entry)

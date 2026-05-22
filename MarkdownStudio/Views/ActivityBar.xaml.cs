@@ -5,7 +5,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 
 namespace MarkdownStudio.Views;
 
-public enum ActivityPane { None, Files, Outline, Themes }
+public enum ActivityPane { None, Files, Search, Outline, Themes }
 
 public sealed partial class ActivityBar : UserControl
 {
@@ -32,6 +32,7 @@ public sealed partial class ActivityBar : UserControl
     private void SetChecks(ActivityPane active)
     {
         FilesBtn.IsChecked   = active == ActivityPane.Files;
+        SearchBtn.IsChecked  = active == ActivityPane.Search;
         OutlineBtn.IsChecked = active == ActivityPane.Outline;
         ThemesBtn.IsChecked  = active == ActivityPane.Themes;
     }
@@ -44,6 +45,7 @@ public sealed partial class ActivityBar : UserControl
         var pane = (t.Tag as string) switch
         {
             "files"   => ActivityPane.Files,
+            "search"  => ActivityPane.Search,
             "outline" => ActivityPane.Outline,
             "themes"  => ActivityPane.Themes,
             _         => ActivityPane.None,
