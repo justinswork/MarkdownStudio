@@ -11,12 +11,75 @@
 
   function getThemeFromQuery() {
     var params = new URLSearchParams(window.location.search);
-    return params.get('theme') || 'vs';
+    return params.get('theme') || 'ms-daylight';
   }
 
   require.config({ paths: { vs: './monaco/vs' } });
 
   require(['vs/editor/editor.main'], function () {
+    // Custom themes that match the app's AppTheme palette
+    monaco.editor.defineTheme('ms-daylight', {
+      base: 'vs', inherit: true, rules: [],
+      colors: {
+        'editor.background': '#FCFCFC',
+        'editor.foreground': '#14161C',
+        'editorLineNumber.foreground': '#A8AAB0',
+        'editorLineNumber.activeForeground': '#14161C',
+        'editor.lineHighlightBackground': '#F0F0F2',
+        'editor.selectionBackground': '#CCE4FF',
+        'editorCursor.foreground': '#007ACC',
+      },
+    });
+    monaco.editor.defineTheme('ms-midnight', {
+      base: 'vs-dark', inherit: true, rules: [],
+      colors: {
+        'editor.background': '#14161C',
+        'editor.foreground': '#E8E8EC',
+        'editorLineNumber.foreground': '#5A5E68',
+        'editorLineNumber.activeForeground': '#E8E8EC',
+        'editor.lineHighlightBackground': '#1E212B',
+        'editor.selectionBackground': '#264F78',
+        'editorCursor.foreground': '#569CD6',
+      },
+    });
+    monaco.editor.defineTheme('ms-sepia', {
+      base: 'vs', inherit: true,
+      rules: [{ token: '', foreground: '40231F' }],
+      colors: {
+        'editor.background': '#FCF6E8',
+        'editor.foreground': '#40231F',
+        'editorLineNumber.foreground': '#A89476',
+        'editorLineNumber.activeForeground': '#40231F',
+        'editor.lineHighlightBackground': '#F2EAD2',
+        'editor.selectionBackground': '#E8D8B0',
+        'editorCursor.foreground': '#A56623',
+      },
+    });
+    monaco.editor.defineTheme('ms-solarized-light', {
+      base: 'vs', inherit: true, rules: [],
+      colors: {
+        'editor.background': '#FDF6E3',
+        'editor.foreground': '#586E75',
+        'editorLineNumber.foreground': '#93A1A1',
+        'editorLineNumber.activeForeground': '#586E75',
+        'editor.lineHighlightBackground': '#EEE8D5',
+        'editor.selectionBackground': '#D8D1B0',
+        'editorCursor.foreground': '#268BD2',
+      },
+    });
+    monaco.editor.defineTheme('ms-solarized-dark', {
+      base: 'vs-dark', inherit: true, rules: [],
+      colors: {
+        'editor.background': '#002B36',
+        'editor.foreground': '#EEE8D5',
+        'editorLineNumber.foreground': '#586E75',
+        'editorLineNumber.activeForeground': '#EEE8D5',
+        'editor.lineHighlightBackground': '#073642',
+        'editor.selectionBackground': '#14546A',
+        'editorCursor.foreground': '#268BD2',
+      },
+    });
+
     var theme = getThemeFromQuery();
 
     var editor = monaco.editor.create(document.getElementById('container'), {
@@ -26,10 +89,11 @@
       automaticLayout: true,
       wordWrap: 'on',
       wrappingIndent: 'same',
-      minimap: { enabled: true },
+      minimap: { enabled: true, renderCharacters: false },
       lineNumbers: 'on',
       renderWhitespace: 'selection',
       fontSize: 14,
+      lineHeight: 22,
       fontFamily: "Cascadia Code, Consolas, 'Courier New', monospace",
       fontLigatures: true,
       smoothScrolling: true,
@@ -41,6 +105,8 @@
       formatOnType: true,
       tabSize: 2,
       insertSpaces: true,
+      padding: { top: 16, bottom: 16 },
+      scrollBeyondLastLine: false,
       'semanticHighlighting.enabled': true,
       'unicodeHighlight.ambiguousCharacters': false,
     });
@@ -57,32 +123,6 @@
       }, 80);
     });
 
-    // Markdown convenience keybindings (mirroring VS Code)
-    editor.addAction({
-      id: 'md.toggleBold',
-      label: 'Markdown: Toggle Bold',
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB],
-      run: function (ed) { wrapSelection(ed, '**', '**'); },
-    });
-    editor.addAction({
-      id: 'md.toggleItalic',
-      label: 'Markdown: Toggle Italic',
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI],
-      run: function (ed) { wrapSelection(ed, '_', '_'); },
-    });
-    editor.addAction({
-      id: 'md.insertLink',
-      label: 'Markdown: Insert Link',
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK],
-      run: function (ed) { wrapSelection(ed, '[', '](url)'); },
-    });
-    editor.addAction({
-      id: 'md.toggleInlineCode',
-      label: 'Markdown: Toggle Inline Code',
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Backquote],
-      run: function (ed) { wrapSelection(ed, '`', '`'); },
-    });
-
     function wrapSelection(ed, before, after) {
       var sel = ed.getSelection();
       var model = ed.getModel();
@@ -93,19 +133,38 @@
       ed.focus();
     }
 
+    editor.addAction({
+      id: 'md.toggleBold', label: 'Markdown: Toggle Bold',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB],
+      run: function (ed) { wrapSelection(ed, '**', '**'); },
+    });
+    editor.addAction({
+      id: 'md.toggleItalic', label: 'Markdown: Toggle Italic',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI],
+      run: function (ed) { wrapSelection(ed, '_', '_'); },
+    });
+    editor.addAction({
+      id: 'md.insertLink', label: 'Markdown: Insert Link',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK],
+      run: function (ed) { wrapSelection(ed, '[', '](url)'); },
+    });
+    editor.addAction({
+      id: 'md.toggleInlineCode', label: 'Markdown: Toggle Inline Code',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Backquote],
+      run: function (ed) { wrapSelection(ed, '`', '`'); },
+    });
+
     window.host = {
-      setText: function (text) {
-        lastSent = text;
-        editor.setValue(text);
-      },
-      getText: function () {
-        return editor.getValue();
-      },
-      setTheme: function (themeName) {
-        monaco.editor.setTheme(themeName);
-      },
-      setWordWrap: function (enabled) {
-        editor.updateOptions({ wordWrap: enabled ? 'on' : 'off' });
+      setText: function (text) { lastSent = text; editor.setValue(text); },
+      getText: function () { return editor.getValue(); },
+      setTheme: function (themeName) { monaco.editor.setTheme(themeName); },
+      setWordWrap: function (enabled) { editor.updateOptions({ wordWrap: enabled ? 'on' : 'off' }); },
+      revealLine: function (lineNumber) {
+        try {
+          editor.revealLineInCenter(lineNumber);
+          editor.setPosition({ lineNumber: lineNumber, column: 1 });
+          editor.focus();
+        } catch (_) {}
       },
       focus: function () { editor.focus(); },
     };

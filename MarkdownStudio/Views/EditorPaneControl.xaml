@@ -17,11 +17,9 @@
         </Grid.ColumnDefinitions>
 
         <controls:WebView2 x:Name="EditorView" Grid.Column="0"
-                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                           MinWidth="200" MinHeight="200" />
+                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
         <Border Grid.Column="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
         <controls:WebView2 x:Name="PreviewView" Grid.Column="2"
-                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                           MinWidth="200" MinHeight="200" />
+                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
     </Grid>
 </UserControl>

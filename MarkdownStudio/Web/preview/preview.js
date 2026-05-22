@@ -11,8 +11,11 @@
 
   function getThemeFromQuery() {
     var params = new URLSearchParams(window.location.search);
-    return params.get('theme') || 'light';
+    return params.get('theme') || 'theme-daylight';
   }
+
+  var KNOWN_THEMES = ['theme-daylight', 'theme-midnight', 'theme-sepia',
+                      'theme-solarized-light', 'theme-solarized-dark'];
 
   var md = window.markdownit({
     html: false,
@@ -47,10 +50,12 @@
   }
 
   function setTheme(name) {
-    document.body.classList.remove('theme-light', 'theme-dark');
-    document.body.classList.add('theme-' + (name === 'dark' ? 'dark' : 'light'));
+    var cls = KNOWN_THEMES.indexOf(name) >= 0 ? name : 'theme-daylight';
+    KNOWN_THEMES.forEach(function (t) { document.body.classList.remove(t); });
+    document.body.classList.add(cls);
+    var isDark = (cls === 'theme-midnight' || cls === 'theme-solarized-dark');
     if (window.mermaid && window.mermaid.initialize) {
-      window.mermaid.initialize({ startOnLoad: false, theme: name === 'dark' ? 'dark' : 'default', securityLevel: 'strict' });
+      window.mermaid.initialize({ startOnLoad: false, theme: isDark ? 'dark' : 'default', securityLevel: 'strict' });
     }
   }
 

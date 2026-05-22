@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Windows.Storage.Pickers;
@@ -10,7 +9,12 @@ namespace MarkdownStudio.Services;
 
 public static class FileService
 {
-    private static readonly string[] MarkdownExtensions = { ".md", ".markdown", ".mdown", ".mkd", ".mdx", ".txt" };
+    public static readonly string[] MarkdownExtensions =
+        { ".md", ".markdown", ".mdown", ".mkd", ".mdx", ".txt" };
+
+    public static bool IsMarkdownFile(string path) =>
+        Array.Exists(MarkdownExtensions, ext =>
+            string.Equals(Path.GetExtension(path), ext, StringComparison.OrdinalIgnoreCase));
 
     public static async Task<(string? path, string? content)> OpenAsync(Window owner)
     {
@@ -31,6 +35,20 @@ public static class FileService
         return (file.Path, text);
     }
 
+    public static async Task<string?> PickFolderAsync(Window owner)
+    {
+        var picker = new FolderPicker
+        {
+            SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+        };
+        picker.FileTypeFilter.Add("*");
+
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(owner));
+
+        var folder = await picker.PickSingleFolderAsync();
+        return folder?.Path;
+    }
+
     public static async Task<string?> PickSavePathAsync(Window owner, string? suggestedName)
     {
         var picker = new FileSavePicker
@@ -47,8 +65,9 @@ public static class FileService
         return file?.Path;
     }
 
-    public static async Task SaveAsync(string path, string content)
-    {
+    public static async Task<string> ReadAllTextAsync(string path) =>
+        await File.ReadAllTextAsync(path);
+
+    public static async Task SaveAsync(string path, string content) =>
         await File.WriteAllTextAsync(path, content);
-    }
 }

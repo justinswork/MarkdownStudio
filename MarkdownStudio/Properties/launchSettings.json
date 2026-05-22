@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "MarkdownStudio (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "MarkdownStudio (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

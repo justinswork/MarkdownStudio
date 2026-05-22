@@ -27,8 +27,10 @@ public sealed partial class EditorPaneControl : UserControl
     private string _initialContent = string.Empty;
 
     public DocumentTab? Document { get; set; }
-    public string MonacoTheme { get; set; } = "vs";
-    public string PreviewTheme { get; set; } = "light";
+    public string MonacoTheme { get; set; } = "ms-daylight";
+    public string PreviewTheme { get; set; } = "theme-daylight";
+
+    public event Action<string>? TextChanged;
 
     public EditorPaneControl()
     {
@@ -36,34 +38,15 @@ public sealed partial class EditorPaneControl : UserControl
         Loaded += OnLoaded;
     }
 
-    private static void LogSize(string tag, EditorPaneControl pane)
-    {
-        try
-        {
-            var line = $"{DateTime.Now:HH:mm:ss.fff} [{tag}] UC {pane.ActualWidth:F0}x{pane.ActualHeight:F0}" +
-                       $"  Grid {pane.LayoutGrid.ActualWidth:F0}x{pane.LayoutGrid.ActualHeight:F0}" +
-                       $"  Editor {pane.EditorView.ActualWidth:F0}x{pane.EditorView.ActualHeight:F0}" +
-                       $"  Preview {pane.PreviewView.ActualWidth:F0}x{pane.PreviewView.ActualHeight:F0}{Environment.NewLine}";
-            System.IO.File.AppendAllText(@"C:\Users\perso\source\MarkdownStudio\layout.log", line);
-        }
-        catch { }
-    }
-
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        LogSize("Loaded", this);
-        SizeChanged += (_, _) => LogSize("SizeChanged", this);
         if (_initialized) return;
         _initialized = true;
         await InitializeWebViewsAsync();
-        LogSize("Post-Init", this);
     }
 
     private async Task InitializeWebViewsAsync()
     {
-        EditorView.DefaultBackgroundColor  = Windows.UI.Color.FromArgb(255, 200, 0, 0);
-        PreviewView.DefaultBackgroundColor = Windows.UI.Color.FromArgb(255, 0, 0, 200);
-
         await EditorView.EnsureCoreWebView2Async();
         await PreviewView.EnsureCoreWebView2Async();
 
@@ -82,10 +65,10 @@ public sealed partial class EditorPaneControl : UserControl
         EditorView.WebMessageReceived += OnEditorWebMessage;
         PreviewView.WebMessageReceived += OnPreviewWebMessage;
 
-        var initialQuery = $"?theme={Uri.EscapeDataString(MonacoTheme)}";
-        EditorView.CoreWebView2.Navigate($"https://{VirtualHost}/editor/index.html{initialQuery}");
-        PreviewView.CoreWebView2.Navigate(
-            $"https://{VirtualHost}/preview/index.html?theme={Uri.EscapeDataString(PreviewTheme)}");
+        var editorQuery  = $"?theme={Uri.EscapeDataString(MonacoTheme)}";
+        var previewQuery = $"?theme={Uri.EscapeDataString(PreviewTheme)}";
+        EditorView.CoreWebView2.Navigate($"https://{VirtualHost}/editor/index.html{editorQuery}");
+        PreviewView.CoreWebView2.Navigate($"https://{VirtualHost}/preview/index.html{previewQuery}");
 
         if (Document != null && !string.IsNullOrEmpty(Document.Content))
             _initialContent = Document.Content;
@@ -110,6 +93,7 @@ public sealed partial class EditorPaneControl : UserControl
                         Document.Content = text;
                         Document.IsDirty = true;
                     }
+                    TextChanged?.Invoke(text);
                     _ = PushToPreviewAsync(text);
                     break;
             }
@@ -154,6 +138,7 @@ public sealed partial class EditorPaneControl : UserControl
         {
             var encoded = JsonSerializer.Serialize(_initialContent);
             await EditorView.CoreWebView2.ExecuteScriptAsync($"window.host.setText({encoded});");
+            TextChanged?.Invoke(_initialContent);
         }
     }
 
@@ -181,6 +166,7 @@ public sealed partial class EditorPaneControl : UserControl
             Document.Content = content;
             Document.IsDirty = false;
         }
+        TextChanged?.Invoke(content);
     }
 
     public async Task<string> GetContentAsync()
@@ -189,6 +175,13 @@ public sealed partial class EditorPaneControl : UserControl
         await _editorReady.Task;
         var raw = await EditorView.CoreWebView2.ExecuteScriptAsync("window.host.getText();");
         return JsonSerializer.Deserialize<string>(raw) ?? string.Empty;
+    }
+
+    public async Task RevealLineAsync(int lineNumber)
+    {
+        if (EditorView.CoreWebView2 == null) return;
+        await _editorReady.Task;
+        await EditorView.CoreWebView2.ExecuteScriptAsync($"window.host.revealLine({lineNumber});");
     }
 
     public async Task ApplyThemeAsync(string monacoTheme, string previewTheme)
