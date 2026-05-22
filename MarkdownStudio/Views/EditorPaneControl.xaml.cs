@@ -263,6 +263,15 @@ public sealed partial class EditorPaneControl : UserControl
         var queryArg = string.IsNullOrEmpty(query) ? "null" : JsonSerializer.Serialize(query);
         await EditorView.CoreWebView2.ExecuteScriptAsync(
             $"window.host.revealLine({lineNumber}, {queryArg});");
+        // Drive the preview to the same source line so outline / search-hit
+        // navigation moves both panes. The editor's own scroll event is
+        // suppressed for SYNC_LOCK_MS by window.host.revealLine, so this
+        // explicit command isn't overwritten by the natural scroll sync.
+        if (PreviewView.CoreWebView2 != null && _previewReady.Task.IsCompleted)
+        {
+            await PreviewView.CoreWebView2.ExecuteScriptAsync(
+                $"window.host.scrollToLine({lineNumber});");
+        }
     }
 
     public async Task OpenFindAsync()

@@ -212,7 +212,11 @@
       },
       revealLine: function (lineNumber, query) {
         try {
-          editor.revealLineInCenter(lineNumber);
+          // Mark this as a programmatic scroll so the resulting scroll event
+          // doesn't bounce back as a "scrolled" sync message (host will scroll
+          // the preview explicitly to the actual target line).
+          lastSyncIn = Date.now();
+          editor.revealLineInCenter(lineNumber, 1 /* ScrollType.Immediate */);
           editor.setPosition({ lineNumber: lineNumber, column: 1 });
           editor.focus();
           if (query) {
