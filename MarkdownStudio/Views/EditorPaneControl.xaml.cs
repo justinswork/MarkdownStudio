@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -70,11 +71,13 @@ public sealed partial class EditorPaneControl : UserControl
 #endif
         EditorView.CoreWebView2.Settings.IsStatusBarEnabled = false;
         PreviewView.CoreWebView2.Settings.IsStatusBarEnabled = false;
-        // Suppress Chromium's default right-click menu ("Copy link to highlight",
-        // "Inspect", etc.). Monaco renders its own context menu in the editor;
-        // the preview is a read-only renderer where keyboard copy is enough.
-        EditorView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
-        PreviewView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+        // Filter Chromium's default right-click menu down to just Copy and
+        // Select All. Strips noise like "Copy link to highlight", "Search the
+        // web", and Inspect that don't make sense in a markdown editor.
+        // Monaco renders its own context menu in the editor area, so this
+        // filter only kicks in for the scrollbar / empty regions there.
+        EditorView.CoreWebView2.ContextMenuRequested  += OnContextMenuRequested;
+        PreviewView.CoreWebView2.ContextMenuRequested += OnContextMenuRequested;
 
         EditorView.WebMessageReceived += OnEditorWebMessage;
         PreviewView.WebMessageReceived += OnPreviewWebMessage;
@@ -165,6 +168,31 @@ public sealed partial class EditorPaneControl : UserControl
         {
             System.Diagnostics.Debug.WriteLine($"Preview message error: {ex}");
         }
+    }
+
+    private static readonly HashSet<string> _allowedContextMenuItems =
+        new(StringComparer.OrdinalIgnoreCase) { "copy", "selectAll" };
+
+    private static void OnContextMenuRequested(
+        CoreWebView2 sender, CoreWebView2ContextMenuRequestedEventArgs args)
+    {
+        var items = args.MenuItems;
+        for (int i = items.Count - 1; i >= 0; i--)
+        {
+            if (!_allowedContextMenuItems.Contains(items[i].Name))
+                items.RemoveAt(i);
+        }
+        // Collapse runs of adjacent separators and trim leading/trailing ones.
+        for (int i = items.Count - 1; i > 0; i--)
+        {
+            if (items[i].Kind == CoreWebView2ContextMenuItemKind.Separator &&
+                items[i - 1].Kind == CoreWebView2ContextMenuItemKind.Separator)
+                items.RemoveAt(i);
+        }
+        while (items.Count > 0 && items[0].Kind == CoreWebView2ContextMenuItemKind.Separator)
+            items.RemoveAt(0);
+        while (items.Count > 0 && items[^1].Kind == CoreWebView2ContextMenuItemKind.Separator)
+            items.RemoveAt(items.Count - 1);
     }
 
     private async Task SyncPreviewScrollAsync(int line)
