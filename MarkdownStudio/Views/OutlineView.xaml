@@ -37,6 +37,7 @@
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" MaxWidth="220">
                 <FontIcon Glyph="&#xEA37;" FontSize="28" Foreground="{ThemeResource MdsTextSecondaryBrush}" />
                 <TextBlock Style="{StaticResource MdsBodyStyle}" TextAlignment="Center"
+                           TextWrapping="Wrap"
                            Text="Add headings to your file and they'll appear here." />
             </StackPanel>
         </Grid>

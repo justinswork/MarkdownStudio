@@ -74,6 +74,7 @@
                 <FontIcon Glyph="&#xE721;" FontSize="28"
                           Foreground="{ThemeResource MdsTextSecondaryBrush}" />
                 <TextBlock x:Name="EmptyHint" Style="{StaticResource MdsBodyStyle}" TextAlignment="Center"
+                           TextWrapping="Wrap"
                            Text="Type to search file names and content." />
             </StackPanel>
         </Grid>
