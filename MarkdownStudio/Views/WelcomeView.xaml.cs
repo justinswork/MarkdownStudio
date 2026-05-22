@@ -68,5 +68,30 @@ public sealed partial class WelcomeView : UserControl
             _mru?.Remove(entry.Path);
     }
 
+    private void OnRevealClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: MruEntry entry }) return;
+        if (string.IsNullOrEmpty(entry.Path)) return;
+
+        try
+        {
+            // Folders open as-is; files open their parent folder with the file
+            // pre-selected via the /select switch.
+            var args = entry.Kind == MruKind.Folder
+                ? $"\"{entry.Path}\""
+                : $"/select,\"{entry.Path}\"";
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = args,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Reveal failed: {ex}");
+        }
+    }
+
     private void OnClearAll(object sender, RoutedEventArgs e) => _mru?.Clear();
 }
