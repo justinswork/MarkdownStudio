@@ -54,101 +54,113 @@
     </UserControl.Resources>
 
     <Grid Background="{ThemeResource MdsWindowBrush}">
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled">
-            <Grid Padding="48,64,48,64" HorizontalAlignment="Center" MaxWidth="1180" ColumnSpacing="48">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="380" />
-                </Grid.ColumnDefinitions>
+        <Grid Padding="48,64,48,64" HorizontalAlignment="Center" MaxWidth="1180" ColumnSpacing="48">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="380" />
+            </Grid.ColumnDefinitions>
 
-                <!-- LEFT column: hero + primary actions, sharing the same edges -->
-                <StackPanel Grid.Column="0" Spacing="44" VerticalAlignment="Top">
+            <!-- LEFT column: hero + primary actions, sharing the same edges -->
+            <StackPanel Grid.Column="0" Spacing="44" VerticalAlignment="Top">
 
-                    <!-- Hero -->
-                    <StackPanel Spacing="12">
-                        <TextBlock Style="{StaticResource MdsTitleStyle}" Text="Markdown Studio" />
-                        <TextBlock Style="{StaticResource MdsSubtitleStyle}" TextWrapping="Wrap"
-                                   Text="A premium markdown editor for Windows. Open a folder to browse your notes, or jump straight into a file." />
-                    </StackPanel>
-
-                    <!-- Primary actions -->
-                    <Grid ColumnSpacing="14">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <Button Grid.Column="0" Click="OnOpenFolder" Style="{StaticResource MdsActionCardStyle}">
-                            <StackPanel Spacing="10">
-                                <FontIcon Glyph="&#xE8B7;" FontSize="22"
-                                          Foreground="{ThemeResource MdsAccentBrush}"
-                                          HorizontalAlignment="Left" />
-                                <TextBlock Style="{StaticResource MdsBodyStrongStyle}" FontSize="14" Text="Open folder" />
-                                <TextBlock Style="{StaticResource MdsCaptionStyle}" TextWrapping="Wrap"
-                                           Text="Browse markdown files in a workspace." />
-                            </StackPanel>
-                        </Button>
-
-                        <Button Grid.Column="1" Click="OnOpenFile" Style="{StaticResource MdsActionCardStyle}">
-                            <StackPanel Spacing="10">
-                                <FontIcon Glyph="&#xE8E5;" FontSize="22"
-                                          Foreground="{ThemeResource MdsAccentBrush}"
-                                          HorizontalAlignment="Left" />
-                                <TextBlock Style="{StaticResource MdsBodyStrongStyle}" FontSize="14" Text="Open file" />
-                                <TextBlock Style="{StaticResource MdsCaptionStyle}" TextWrapping="Wrap"
-                                           Text="Pick a single .md to edit." />
-                            </StackPanel>
-                        </Button>
-
-                        <Button Grid.Column="2" Click="OnNewFile" Style="{StaticResource MdsActionCardStyle}">
-                            <StackPanel Spacing="10">
-                                <FontIcon Glyph="&#xE710;" FontSize="22"
-                                          Foreground="{ThemeResource MdsAccentBrush}"
-                                          HorizontalAlignment="Left" />
-                                <TextBlock Style="{StaticResource MdsBodyStrongStyle}" FontSize="14" Text="New file" />
-                                <TextBlock Style="{StaticResource MdsCaptionStyle}" TextWrapping="Wrap"
-                                           Text="Start from a blank document." />
-                            </StackPanel>
-                        </Button>
-                    </Grid>
+                <!-- Hero -->
+                <StackPanel Spacing="12">
+                    <TextBlock Style="{StaticResource MdsTitleStyle}" Text="Markdown Studio" />
+                    <TextBlock Style="{StaticResource MdsSubtitleStyle}" TextWrapping="Wrap"
+                               Text="A premium markdown editor for Windows. Open a folder to browse your notes, or jump straight into a file." />
                 </StackPanel>
 
-                <!-- RIGHT column: pinned + recent MRU -->
-                <StackPanel Grid.Column="1" Spacing="18" VerticalAlignment="Top">
+                <!-- Primary actions -->
+                <Grid ColumnSpacing="14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                    <!-- Pinned section -->
-                    <StackPanel x:Name="PinnedSection" Spacing="12" Visibility="Collapsed">
-                        <TextBlock Style="{StaticResource MdsSidebarTitleStyle}" Text="PINNED" />
+                    <Button Grid.Column="0" Click="OnOpenFolder" Style="{StaticResource MdsActionCardStyle}">
+                        <StackPanel Spacing="10">
+                            <FontIcon Glyph="&#xE8B7;" FontSize="22"
+                                      Foreground="{ThemeResource MdsAccentBrush}"
+                                      HorizontalAlignment="Left" />
+                            <TextBlock Style="{StaticResource MdsBodyStrongStyle}" FontSize="14" Text="Open folder" />
+                            <TextBlock Style="{StaticResource MdsCaptionStyle}" TextWrapping="Wrap"
+                                       Text="Browse markdown files in a workspace." />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="1" Click="OnOpenFile" Style="{StaticResource MdsActionCardStyle}">
+                        <StackPanel Spacing="10">
+                            <FontIcon Glyph="&#xE8E5;" FontSize="22"
+                                      Foreground="{ThemeResource MdsAccentBrush}"
+                                      HorizontalAlignment="Left" />
+                            <TextBlock Style="{StaticResource MdsBodyStrongStyle}" FontSize="14" Text="Open file" />
+                            <TextBlock Style="{StaticResource MdsCaptionStyle}" TextWrapping="Wrap"
+                                       Text="Pick a single .md to edit." />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="2" Click="OnNewFile" Style="{StaticResource MdsActionCardStyle}">
+                        <StackPanel Spacing="10">
+                            <FontIcon Glyph="&#xE710;" FontSize="22"
+                                      Foreground="{ThemeResource MdsAccentBrush}"
+                                      HorizontalAlignment="Left" />
+                            <TextBlock Style="{StaticResource MdsBodyStrongStyle}" FontSize="14" Text="New file" />
+                            <TextBlock Style="{StaticResource MdsCaptionStyle}" TextWrapping="Wrap"
+                                       Text="Start from a blank document." />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </StackPanel>
+
+            <!-- RIGHT column: pinned + recent MRU, each with its own scroll region -->
+            <Grid Grid.Column="1" RowSpacing="18">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Pinned section: caps at ~5-6 items, scrolls internally beyond that -->
+                <StackPanel x:Name="PinnedSection" Grid.Row="0" Spacing="12" Visibility="Collapsed">
+                    <TextBlock Style="{StaticResource MdsSidebarTitleStyle}" Text="PINNED" />
+                    <ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollMode="Disabled">
                         <ItemsControl x:Name="PinnedList"
                                       ItemsSource="{x:Bind PinnedEntries, Mode=OneWay}"
                                       ItemTemplate="{StaticResource MruItemTemplate}" />
-                    </StackPanel>
-
-                    <!-- Recent section -->
-                    <StackPanel Spacing="12">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Style="{StaticResource MdsSidebarTitleStyle}"
-                                       Text="RECENT" VerticalAlignment="Center" />
-                            <Button Grid.Column="1" x:Name="ClearAllButton" Visibility="Collapsed"
-                                    Click="OnClearAll" Style="{StaticResource MdsGhostButtonStyle}"
-                                    Content="Clear" />
-                        </Grid>
-
-                        <ItemsControl x:Name="RecentList"
-                                      ItemsSource="{x:Bind RecentEntries, Mode=OneWay}"
-                                      ItemTemplate="{StaticResource MruItemTemplate}" />
-
-                        <TextBlock x:Name="EmptyText" Style="{StaticResource MdsCaptionStyle}"
-                                   Text="Nothing yet — open a file or folder to get started."
-                                   Visibility="Collapsed" />
-                    </StackPanel>
+                    </ScrollViewer>
                 </StackPanel>
+
+                <!-- Recent section: fills remaining column height, scrolls internally -->
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource MdsSidebarTitleStyle}"
+                                   Text="RECENT" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" x:Name="ClearAllButton" Visibility="Collapsed"
+                                Click="OnClearAll" Style="{StaticResource MdsGhostButtonStyle}"
+                                Content="Clear" />
+                    </Grid>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollMode="Disabled">
+                        <StackPanel>
+                            <ItemsControl x:Name="RecentList"
+                                          ItemsSource="{x:Bind RecentEntries, Mode=OneWay}"
+                                          ItemTemplate="{StaticResource MruItemTemplate}" />
+                            <TextBlock x:Name="EmptyText" Style="{StaticResource MdsCaptionStyle}"
+                                       Text="Nothing yet — open a file or folder to get started."
+                                       Visibility="Collapsed" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
             </Grid>
-        </ScrollViewer>
+        </Grid>
     </Grid>
 </UserControl>
