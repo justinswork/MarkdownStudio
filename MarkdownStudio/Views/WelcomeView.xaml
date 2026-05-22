@@ -5,6 +5,54 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:models="using:MarkdownStudio.Models">
 
+    <UserControl.Resources>
+        <DataTemplate x:Key="MruItemTemplate" x:DataType="models:MruEntry">
+            <Button Click="OnMruClicked" Tag="{x:Bind}"
+                    Style="{StaticResource MdsMruItemStyle}">
+                <Button.ContextFlyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem Text="{x:Bind PinMenuText}" Click="OnPinClicked" Tag="{x:Bind}">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="{x:Bind PinMenuGlyph}" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="Remove from list" Click="OnRemoveClicked" Tag="{x:Bind}">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE74D;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Button.ContextFlyout>
+                <Grid ColumnSpacing="14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <FontIcon Grid.Column="0" Glyph="{x:Bind Glyph}" FontSize="16"
+                              Foreground="{ThemeResource MdsTextSecondaryBrush}" />
+                    <StackPanel Grid.Column="1" Spacing="2">
+                        <TextBlock Style="{StaticResource MdsBodyStrongStyle}"
+                                   Text="{x:Bind DisplayName}" />
+                        <TextBlock Style="{StaticResource MdsCaptionStyle}"
+                                   TextTrimming="CharacterEllipsis"
+                                   Text="{x:Bind ParentLocation}" />
+                    </StackPanel>
+                    <FontIcon Grid.Column="2" Glyph="&#xE840;" FontSize="12"
+                              Foreground="{ThemeResource MdsAccentBrush}"
+                              VerticalAlignment="Center"
+                              Margin="0,0,4,0"
+                              Visibility="{x:Bind PinIndicatorVisibility}" />
+                    <TextBlock Grid.Column="3" Style="{StaticResource MdsCaptionStyle}"
+                               VerticalAlignment="Center"
+                               Text="{x:Bind RelativeWhen}" />
+                </Grid>
+            </Button>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <Grid Background="{ThemeResource MdsWindowBrush}">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled">
             <Grid Padding="48,64,48,64" HorizontalAlignment="Center" MaxWidth="1180" ColumnSpacing="48">
@@ -66,52 +114,39 @@
                     </Grid>
                 </StackPanel>
 
-                <!-- RIGHT column: combined MRU -->
-                <StackPanel Grid.Column="1" Spacing="12" VerticalAlignment="Top">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Style="{StaticResource MdsSidebarTitleStyle}"
-                                   Text="RECENT" VerticalAlignment="Center" />
-                        <Button Grid.Column="1" x:Name="ClearAllButton" Visibility="Collapsed"
-                                Click="OnClearAll" Style="{StaticResource MdsGhostButtonStyle}"
-                                Content="Clear" />
-                    </Grid>
+                <!-- RIGHT column: pinned + recent MRU -->
+                <StackPanel Grid.Column="1" Spacing="18" VerticalAlignment="Top">
 
-                    <ItemsControl x:Name="RecentList" ItemsSource="{x:Bind RecentEntries, Mode=OneWay}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="models:MruEntry">
-                                <Button Click="OnMruClicked" Tag="{x:Bind}"
-                                        Style="{StaticResource MdsMruItemStyle}">
-                                    <Grid ColumnSpacing="14">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon Grid.Column="0" Glyph="{x:Bind Glyph}" FontSize="16"
-                                                  Foreground="{ThemeResource MdsTextSecondaryBrush}" />
-                                        <StackPanel Grid.Column="1" Spacing="2">
-                                            <TextBlock Style="{StaticResource MdsBodyStrongStyle}"
-                                                       Text="{x:Bind DisplayName}" />
-                                            <TextBlock Style="{StaticResource MdsCaptionStyle}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       Text="{x:Bind ParentLocation}" />
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="2" Style="{StaticResource MdsCaptionStyle}"
-                                                   VerticalAlignment="Center"
-                                                   Text="{x:Bind RelativeWhen}" />
-                                    </Grid>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <!-- Pinned section -->
+                    <StackPanel x:Name="PinnedSection" Spacing="12" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource MdsSidebarTitleStyle}" Text="PINNED" />
+                        <ItemsControl x:Name="PinnedList"
+                                      ItemsSource="{x:Bind PinnedEntries, Mode=OneWay}"
+                                      ItemTemplate="{StaticResource MruItemTemplate}" />
+                    </StackPanel>
 
-                    <TextBlock x:Name="EmptyText" Style="{StaticResource MdsCaptionStyle}"
-                               Text="Nothing yet — open a file or folder to get started."
-                               Visibility="Collapsed" />
+                    <!-- Recent section -->
+                    <StackPanel Spacing="12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Style="{StaticResource MdsSidebarTitleStyle}"
+                                       Text="RECENT" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" x:Name="ClearAllButton" Visibility="Collapsed"
+                                    Click="OnClearAll" Style="{StaticResource MdsGhostButtonStyle}"
+                                    Content="Clear" />
+                        </Grid>
+
+                        <ItemsControl x:Name="RecentList"
+                                      ItemsSource="{x:Bind RecentEntries, Mode=OneWay}"
+                                      ItemTemplate="{StaticResource MruItemTemplate}" />
+
+                        <TextBlock x:Name="EmptyText" Style="{StaticResource MdsCaptionStyle}"
+                                   Text="Nothing yet — open a file or folder to get started."
+                                   Visibility="Collapsed" />
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </ScrollViewer>

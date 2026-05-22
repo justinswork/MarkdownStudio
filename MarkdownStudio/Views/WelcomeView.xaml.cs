@@ -9,6 +9,7 @@ namespace MarkdownStudio.Views;
 
 public sealed partial class WelcomeView : UserControl
 {
+    public ObservableCollection<MruEntry> PinnedEntries { get; } = new();
     public ObservableCollection<MruEntry> RecentEntries { get; } = new();
 
     public event Action? OpenFolderRequested;
@@ -34,9 +35,13 @@ public sealed partial class WelcomeView : UserControl
     {
         if (_mru == null) return;
 
-        RecentEntries.Clear();
-        foreach (var e in _mru.Entries) RecentEntries.Add(e);
+        PinnedEntries.Clear();
+        foreach (var e in _mru.Pinned) PinnedEntries.Add(e);
 
+        RecentEntries.Clear();
+        foreach (var e in _mru.Recent) RecentEntries.Add(e);
+
+        PinnedSection.Visibility   = PinnedEntries.Count >  0 ? Visibility.Visible : Visibility.Collapsed;
         EmptyText.Visibility       = RecentEntries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         ClearAllButton.Visibility  = RecentEntries.Count >  0 ? Visibility.Visible : Visibility.Collapsed;
     }
@@ -49,6 +54,18 @@ public sealed partial class WelcomeView : UserControl
     {
         if (sender is Button { Tag: MruEntry entry })
             MruActivated?.Invoke(entry);
+    }
+
+    private void OnPinClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: MruEntry entry })
+            _mru?.SetPinned(entry.Path, !entry.IsPinned);
+    }
+
+    private void OnRemoveClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: MruEntry entry })
+            _mru?.Remove(entry.Path);
     }
 
     private void OnClearAll(object sender, RoutedEventArgs e) => _mru?.Clear();

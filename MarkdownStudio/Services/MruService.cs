@@ -50,6 +50,22 @@ public sealed class MruService
         get { lock (_gate) return _entries.ToList(); }
     }
 
+    public IReadOnlyList<MruEntry> Pinned
+    {
+        get
+        {
+            lock (_gate) return _entries
+                .Where(e => e.IsPinned)
+                .OrderBy(e => e.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+    }
+
+    public IReadOnlyList<MruEntry> Recent
+    {
+        get { lock (_gate) return _entries.Where(e => !e.IsPinned).ToList(); }
+    }
+
     public IReadOnlyList<MruEntry> Files
     {
         get { lock (_gate) return _entries.Where(e => e.Kind == MruKind.File).ToList(); }
@@ -65,14 +81,32 @@ public sealed class MruService
         if (string.IsNullOrWhiteSpace(path)) return;
         lock (_gate)
         {
+            var existing = _entries.FirstOrDefault(e =>
+                string.Equals(e.Path, path, StringComparison.OrdinalIgnoreCase));
+            var wasPinned = existing?.IsPinned ?? false;
             _entries.RemoveAll(e => string.Equals(e.Path, path, StringComparison.OrdinalIgnoreCase));
             _entries.Insert(0, new MruEntry
             {
                 Path = path,
                 Kind = kind,
                 LastOpened = DateTimeOffset.Now,
+                IsPinned = wasPinned,
             });
-            if (_entries.Count > Max) _entries = _entries.Take(Max).ToList();
+            TrimRecentToMax();
+            Save();
+        }
+        Changed?.Invoke();
+    }
+
+    public void SetPinned(string path, bool pinned)
+    {
+        lock (_gate)
+        {
+            var entry = _entries.FirstOrDefault(e =>
+                string.Equals(e.Path, path, StringComparison.OrdinalIgnoreCase));
+            if (entry == null || entry.IsPinned == pinned) return;
+            entry.IsPinned = pinned;
+            TrimRecentToMax();
             Save();
         }
         Changed?.Invoke();
@@ -94,10 +128,26 @@ public sealed class MruService
     {
         lock (_gate)
         {
-            if (_entries.Count == 0) return;
-            _entries.Clear();
+            var removed = _entries.RemoveAll(e => !e.IsPinned);
+            if (removed == 0) return;
             Save();
         }
         Changed?.Invoke();
+    }
+
+    // Cap non-pinned entries at Max; pinned ones never get evicted.
+    private void TrimRecentToMax()
+    {
+        var nonPinned = _entries.Count(e => !e.IsPinned);
+        if (nonPinned <= Max) return;
+        var toRemove = nonPinned - Max;
+        for (int i = _entries.Count - 1; i >= 0 && toRemove > 0; i--)
+        {
+            if (!_entries[i].IsPinned)
+            {
+                _entries.RemoveAt(i);
+                toRemove--;
+            }
+        }
     }
 }

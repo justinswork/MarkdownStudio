@@ -10,6 +10,7 @@ public sealed class MruEntry
     public string Path { get; set; } = string.Empty;
     public MruKind Kind { get; set; }
     public DateTimeOffset LastOpened { get; set; }
+    public bool IsPinned { get; set; }
 
     public string DisplayName =>
         Kind == MruKind.Folder
@@ -23,6 +24,12 @@ public sealed class MruEntry
 
     // Segoe Fluent Icons: FolderHorizontal (E8B7) for folders, Document (E8A5) for files.
     public string Glyph => Kind == MruKind.Folder ? "" : "";
+
+    public string PinMenuText => IsPinned ? "Unpin" : "Pin to top";
+    public string PinMenuGlyph => "";
+
+    public Microsoft.UI.Xaml.Visibility PinIndicatorVisibility =>
+        IsPinned ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
 
     public string RelativeWhen
     {
