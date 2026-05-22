@@ -110,14 +110,12 @@
 
                 <Grid Grid.Row="0" Padding="12,8" x:Name="TopToolbar">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <views:ModeSegmentedControl x:Name="ModeControl" Grid.Column="0" />
-
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                        <views:ModeSegmentedControl x:Name="ModeControl" />
                         <Button x:Name="FocusButton" Click="OnToggleFocus"
                                 Style="{StaticResource MdsGhostButtonStyle}"
                                 ToolTipService.ToolTip="Distraction-free mode (F11)">

@@ -157,6 +157,8 @@ public sealed partial class MainWindow : Window
             MonacoTheme = _appTheme.EffectiveMonacoTheme,
             PreviewTheme = _appTheme.EffectivePreviewClass,
         };
+        // New tab inherits the current view mode (Editor / Split / Preview).
+        _ = pane.SetLayoutAsync(ModeToLayout(ModeControl.Mode));
         pane.TextChanged += text => DispatcherQueue.TryEnqueue(() =>
         {
             if (CurrentPane == pane)
@@ -192,17 +194,18 @@ public sealed partial class MainWindow : Window
         Tabs.SelectedItem is TabViewItem item && _panes.TryGetValue(item, out var p) ? p : null;
 
     // ---- Mode ----
+    private static EditorLayout ModeToLayout(EditorMode mode) => mode switch
+    {
+        EditorMode.Editor  => EditorLayout.EditorOnly,
+        EditorMode.Preview => EditorLayout.PreviewOnly,
+        _                  => EditorLayout.Split,
+    };
+
     private void OnModeChanged(EditorMode mode)
     {
-        if (CurrentPane is { } pane)
-        {
-            _ = pane.SetLayoutAsync(mode switch
-            {
-                EditorMode.Editor  => EditorLayout.EditorOnly,
-                EditorMode.Preview => EditorLayout.PreviewOnly,
-                _                  => EditorLayout.Split,
-            });
-        }
+        var layout = ModeToLayout(mode);
+        foreach (var pane in _panes.Values)
+            _ = pane.SetLayoutAsync(layout);
     }
 
     // ---- File operations ----
