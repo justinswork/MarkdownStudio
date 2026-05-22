@@ -330,7 +330,8 @@ public sealed partial class MainWindow : Window
         _mru.Touch(path, MruKind.Folder);
         ActivityRail.CurrentPane = ActivityPane.Files;
         SetSidebarPane(ActivityPane.Files);
-        StatusText.Text = $"Folder: {path}";
+        _fileTreeView.PulseFolderBanner();
+        StatusText.Text = $"Opened folder: {Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar))}";
     }
 
     private async Task OpenFileAtLineAsync(string path, int lineNumber)

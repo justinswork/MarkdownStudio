@@ -7,6 +7,9 @@ using MarkdownStudio.Models;
 using MarkdownStudio.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
+using Windows.UI;
 
 namespace MarkdownStudio.Views;
 
@@ -143,6 +146,26 @@ public sealed partial class FileTreeView : UserControl
         }
 
         return node;
+    }
+
+    public void PulseFolderBanner()
+    {
+        var accentBrush = Application.Current.Resources["MdsAccentBrush"] as SolidColorBrush;
+        var accent = accentBrush?.Color ?? Color.FromArgb(0xFF, 0x00, 0x7A, 0xCC);
+        OpenedPulseBrush.Color = Color.FromArgb(0xFF, accent.R, accent.G, accent.B);
+
+        var anim = new DoubleAnimation
+        {
+            From = 0.32,
+            To = 0.0,
+            Duration = new Duration(TimeSpan.FromMilliseconds(1100)),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        };
+        Storyboard.SetTarget(anim, OpenedPulseBorder);
+        Storyboard.SetTargetProperty(anim, "Opacity");
+        var sb = new Storyboard();
+        sb.Children.Add(anim);
+        sb.Begin();
     }
 
     private void OnOpenFolder(object sender, RoutedEventArgs e) => OpenFolderRequested?.Invoke();

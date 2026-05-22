@@ -17,6 +17,13 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
+            <Border Grid.ColumnSpan="2" x:Name="OpenedPulseBorder"
+                    Margin="-16,-14,-12,-8" Opacity="0" IsHitTestVisible="False">
+                <Border.Background>
+                    <SolidColorBrush x:Name="OpenedPulseBrush" />
+                </Border.Background>
+            </Border>
+
             <StackPanel Grid.Column="0" Spacing="2">
                 <TextBlock x:Name="FolderNameText" Style="{StaticResource MdsSidebarTitleStyle}" Text="No folder" />
                 <TextBlock x:Name="FolderPathText" Style="{StaticResource MdsCaptionStyle}"
