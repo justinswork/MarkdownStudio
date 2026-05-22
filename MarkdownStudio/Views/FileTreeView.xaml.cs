@@ -41,6 +41,8 @@ public sealed partial class FileTreeView : UserControl
         InitializeComponent();
     }
 
+    private const int MaxDepth = 16;
+
     private async Task RebuildAsync()
     {
         Roots.Clear();
@@ -56,52 +58,91 @@ public sealed partial class FileTreeView : UserControl
         FolderPathText.Text = _folder;
         EmptyState.Visibility = Visibility.Collapsed;
 
-        var root = await Task.Run(() => BuildNode(_folder));
+        FileTreeNode? root;
+        try
+        {
+            root = await Task.Run(() =>
+            {
+                var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                return BuildNode(_folder!, 0, visited);
+            });
+        }
+        catch (Exception ex)
+        {
+            FolderPathText.Text = $"Error: {ex.Message}";
+            return;
+        }
+
         if (root != null)
         {
-            foreach (var child in root.Children)
-                Roots.Add(child);
+            foreach (var child in root.Children) Roots.Add(child);
         }
     }
 
-    private static FileTreeNode? BuildNode(string path)
+    private static FileTreeNode? BuildNode(string path, int depth, HashSet<string> visited)
     {
-        try
-        {
-            var dirInfo = new DirectoryInfo(path);
-            var node = new FileTreeNode
-            {
-                Name = dirInfo.Name,
-                Path = dirInfo.FullName,
-                IsDirectory = true,
-            };
+        if (depth > MaxDepth) return null;
 
-            foreach (var sub in dirInfo.EnumerateDirectories())
+        DirectoryInfo dirInfo;
+        try { dirInfo = new DirectoryInfo(path); }
+        catch { return null; }
+
+        // Skip symlinks / junctions to avoid cycles (e.g. C:\Documents and Settings → C:\Users)
+        if ((dirInfo.Attributes & FileAttributes.ReparsePoint) != 0) return null;
+
+        string canonical;
+        try { canonical = dirInfo.FullName.TrimEnd(System.IO.Path.DirectorySeparatorChar); }
+        catch { return null; }
+        if (!visited.Add(canonical)) return null;
+
+        var node = new FileTreeNode
+        {
+            Name = dirInfo.Name,
+            Path = canonical,
+            IsDirectory = true,
+        };
+
+        IEnumerable<DirectoryInfo> subs;
+        try { subs = dirInfo.EnumerateDirectories(); }
+        catch { subs = Array.Empty<DirectoryInfo>(); }
+
+        foreach (var sub in subs)
+        {
+            try
             {
                 if (SkipDirs.Contains(sub.Name)) continue;
-                if ((sub.Attributes & FileAttributes.Hidden) != 0) continue;
-                var child = BuildNode(sub.FullName);
-                if (child != null && (child.Children.Count > 0)) node.Children.Add(child);
+                if ((sub.Attributes & FileAttributes.Hidden)      != 0) continue;
+                if ((sub.Attributes & FileAttributes.System)      != 0) continue;
+                if ((sub.Attributes & FileAttributes.ReparsePoint) != 0) continue;
             }
+            catch { continue; }
 
-            foreach (var file in dirInfo.EnumerateFiles())
+            var child = BuildNode(sub.FullName, depth + 1, visited);
+            if (child != null && child.Children.Count > 0) node.Children.Add(child);
+        }
+
+        IEnumerable<FileInfo> files;
+        try { files = dirInfo.EnumerateFiles(); }
+        catch { files = Array.Empty<FileInfo>(); }
+
+        foreach (var file in files)
+        {
+            try
             {
                 if (!FileService.IsMarkdownFile(file.FullName)) continue;
                 if ((file.Attributes & FileAttributes.Hidden) != 0) continue;
-                node.Children.Add(new FileTreeNode
-                {
-                    Name = file.Name,
-                    Path = file.FullName,
-                    IsDirectory = false,
-                });
             }
+            catch { continue; }
 
-            return node;
+            node.Children.Add(new FileTreeNode
+            {
+                Name = file.Name,
+                Path = file.FullName,
+                IsDirectory = false,
+            });
         }
-        catch
-        {
-            return null;
-        }
+
+        return node;
     }
 
     private void OnOpenFolder(object sender, RoutedEventArgs e) => OpenFolderRequested?.Invoke();
