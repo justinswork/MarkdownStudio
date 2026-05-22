@@ -7,6 +7,9 @@ using MarkdownStudio.Models;
 using MarkdownStudio.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Documents;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Text;
 
 namespace MarkdownStudio.Views;
 
@@ -126,5 +129,52 @@ public sealed partial class SearchView : UserControl
     {
         if (sender is Button { Tag: SearchHit hit })
             HitActivated?.Invoke(hit);
+    }
+
+    private void OnHitTextLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBlock tb && tb.Tag is SearchHit hit)
+            BuildHitInlines(tb, hit);
+    }
+
+    private static void BuildHitInlines(TextBlock tb, SearchHit hit)
+    {
+        tb.Inlines.Clear();
+
+        var secondaryBrush = Application.Current.Resources["MdsTextSecondaryBrush"] as Brush;
+        var accentBrush    = Application.Current.Resources["MdsAccentBrush"]        as Brush;
+        var accentSoftBrush = Application.Current.Resources["MdsAccentSoftBrush"]   as Brush;
+
+        if (hit.IsFileNameMatch)
+        {
+            var fn = new Run { Text = "filename match" };
+            if (secondaryBrush != null) fn.Foreground = secondaryBrush;
+            tb.Inlines.Add(fn);
+            return;
+        }
+
+        var prefix = new Run { Text = hit.LinePrefix };
+        if (secondaryBrush != null) prefix.Foreground = secondaryBrush;
+        tb.Inlines.Add(prefix);
+
+        if (hit.MatchStart < 0 || string.IsNullOrEmpty(hit.Query))
+        {
+            tb.Inlines.Add(new Run { Text = hit.Snippet });
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(hit.SnippetBeforeMatch))
+            tb.Inlines.Add(new Run { Text = hit.SnippetBeforeMatch });
+
+        var match = new Run
+        {
+            Text = hit.MatchText,
+            FontWeight = FontWeights.SemiBold,
+        };
+        if (accentBrush != null) match.Foreground = accentBrush;
+        tb.Inlines.Add(match);
+
+        if (!string.IsNullOrEmpty(hit.SnippetAfterMatch))
+            tb.Inlines.Add(new Run { Text = hit.SnippetAfterMatch });
     }
 }

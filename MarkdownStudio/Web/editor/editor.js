@@ -173,11 +173,31 @@
         if (tabSize) opts.tabSize = tabSize;
         editor.updateOptions(opts);
       },
-      revealLine: function (lineNumber) {
+      revealLine: function (lineNumber, query) {
         try {
           editor.revealLineInCenter(lineNumber);
           editor.setPosition({ lineNumber: lineNumber, column: 1 });
           editor.focus();
+          if (query) {
+            var model = editor.getModel();
+            if (model) {
+              var content = model.getLineContent(lineNumber);
+              var idx = content.toLowerCase().indexOf(query.toLowerCase());
+              if (idx >= 0) {
+                var range = new monaco.Range(
+                  lineNumber, idx + 1,
+                  lineNumber, idx + 1 + query.length);
+                editor.setSelection(range);
+              }
+            }
+          }
+        } catch (_) {}
+      },
+      openFind: function () {
+        try {
+          editor.focus();
+          var action = editor.getAction('actions.find');
+          if (action) action.run();
         } catch (_) {}
       },
       focus: function () { editor.focus(); },

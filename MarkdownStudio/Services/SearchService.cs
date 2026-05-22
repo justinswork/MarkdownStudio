@@ -34,6 +34,7 @@ public static class SearchService
         var state = new SearchState
         {
             RootFolder  = root,
+            Query       = query,
             QueryLower  = query.ToLowerInvariant(),
             Ct          = ct,
         };
@@ -118,6 +119,9 @@ public static class SearchService
             var line = lines[i];
             if (line.IndexOf(state.QueryLower, StringComparison.OrdinalIgnoreCase) < 0) continue;
 
+            var snippet = Truncate(line.Trim(), SnippetMaxLen);
+            var matchStart = snippet.IndexOf(state.Query, StringComparison.OrdinalIgnoreCase);
+
             var group = GetOrCreateGroup(file, state);
             group.Hits.Add(new SearchHit
             {
@@ -125,7 +129,9 @@ public static class SearchService
                 FileName     = file.Name,
                 RelativePath = GetRelative(file.FullName, state.RootFolder),
                 LineNumber   = i + 1,
-                Snippet      = Truncate(line.Trim(), SnippetMaxLen),
+                Snippet      = snippet,
+                Query        = state.Query,
+                MatchStart   = matchStart,
             });
             state.TotalHits++;
             hitsInThisFile++;
@@ -143,6 +149,7 @@ public static class SearchService
             RelativePath = GetRelative(file.FullName, state.RootFolder),
             LineNumber   = 0,
             Snippet      = string.Empty,
+            Query        = state.Query,
         });
         state.TotalHits++;
     }
@@ -178,6 +185,7 @@ public static class SearchService
     private sealed class SearchState
     {
         public string RootFolder = string.Empty;
+        public string Query      = string.Empty;
         public string QueryLower = string.Empty;
         public CancellationToken Ct;
         public Dictionary<string, SearchGroup> Groups = new(StringComparer.OrdinalIgnoreCase);

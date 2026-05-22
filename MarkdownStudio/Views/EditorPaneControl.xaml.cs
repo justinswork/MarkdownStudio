@@ -170,12 +170,13 @@ public sealed partial class EditorPaneControl : UserControl
     public async Task SetContentAsync(string content)
     {
         _initialContent = content;
-        if (_editorReady.Task.IsCompleted && EditorView.CoreWebView2 != null)
+        await _editorReady.Task;
+        if (EditorView.CoreWebView2 != null)
         {
             var encoded = JsonSerializer.Serialize(content);
             await EditorView.CoreWebView2.ExecuteScriptAsync($"window.host.setText({encoded});");
         }
-        if (_previewReady.Task.IsCompleted && PreviewView.CoreWebView2 != null)
+        if (PreviewView.CoreWebView2 != null)
         {
             await PushToPreviewAsync(content);
         }
@@ -195,11 +196,21 @@ public sealed partial class EditorPaneControl : UserControl
         return JsonSerializer.Deserialize<string>(raw) ?? string.Empty;
     }
 
-    public async Task RevealLineAsync(int lineNumber)
+    public async Task RevealLineAsync(int lineNumber, string? query = null)
     {
         if (EditorView.CoreWebView2 == null) return;
         await _editorReady.Task;
-        await EditorView.CoreWebView2.ExecuteScriptAsync($"window.host.revealLine({lineNumber});");
+        var queryArg = string.IsNullOrEmpty(query) ? "null" : JsonSerializer.Serialize(query);
+        await EditorView.CoreWebView2.ExecuteScriptAsync(
+            $"window.host.revealLine({lineNumber}, {queryArg});");
+    }
+
+    public async Task OpenFindAsync()
+    {
+        if (EditorView.CoreWebView2 == null) return;
+        await _editorReady.Task;
+        await EditorView.CoreWebView2.ExecuteScriptAsync("window.host.openFind();");
+        EditorView.Focus(FocusState.Programmatic);
     }
 
     public async Task ApplyThemeAsync(string monacoTheme, string previewTheme)

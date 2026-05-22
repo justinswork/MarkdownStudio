@@ -23,6 +23,7 @@
             <KeyboardAccelerator Modifiers="Control" Key="S" Invoked="OnSaveAccel" />
             <KeyboardAccelerator Modifiers="Control,Shift" Key="S" Invoked="OnSaveAsAccel" />
             <KeyboardAccelerator Modifiers="Control" Key="W" Invoked="OnCloseTabAccel" />
+            <KeyboardAccelerator Modifiers="Control" Key="F" Invoked="OnFindAccel" />
         </Grid.KeyboardAccelerators>
 
         <!-- Title bar with menu inline -->
@@ -68,6 +69,9 @@
                     <MenuFlyoutItem Text="Editor only" Click="OnEditorMode" />
                     <MenuFlyoutItem Text="Preview only" Click="OnPreviewMode" />
                     <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Find in document..." Click="OnFindInDocument">
+                        <MenuFlyoutItem.KeyboardAcceleratorTextOverride>Ctrl+F</MenuFlyoutItem.KeyboardAcceleratorTextOverride>
+                    </MenuFlyoutItem>
                     <MenuFlyoutItem Text="Toggle word wrap" Click="OnToggleWordWrap" />
                     <MenuFlyoutItem Text="Toggle distraction-free mode" Click="OnToggleFocusMenu">
                         <MenuFlyoutItem.KeyboardAcceleratorTextOverride>F11</MenuFlyoutItem.KeyboardAcceleratorTextOverride>
@@ -116,6 +120,11 @@
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                         <views:ModeSegmentedControl x:Name="ModeControl" />
+                        <Button x:Name="FindButton" Click="OnFindInDocument"
+                                Style="{StaticResource MdsGhostButtonStyle}"
+                                ToolTipService.ToolTip="Find in document (Ctrl+F)">
+                            <FontIcon Glyph="&#xE721;" FontSize="14" />
+                        </Button>
                         <Button x:Name="FocusButton" Click="OnToggleFocus"
                                 Style="{StaticResource MdsGhostButtonStyle}"
                                 ToolTipService.ToolTip="Distraction-free mode (F11)">

@@ -73,7 +73,7 @@ public sealed partial class MainWindow : Window
         _fileTreeView.OpenFolderRequested += async () => await OpenFolderInteractiveAsync();
         _fileTreeView.FileOpenRequested   += async path => await OpenFileFromPathAsync(path);
 
-        _searchView.HitActivated += hit => _ = OpenFileAtLineAsync(hit.FilePath, hit.LineNumber);
+        _searchView.HitActivated += hit => _ = OpenFileAtLineAsync(hit.FilePath, hit.LineNumber, hit.Query);
 
         _outlineView.HeadingActivated += node =>
         {
@@ -334,11 +334,11 @@ public sealed partial class MainWindow : Window
         StatusText.Text = $"Opened folder: {Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar))}";
     }
 
-    private async Task OpenFileAtLineAsync(string path, int lineNumber)
+    private async Task OpenFileAtLineAsync(string path, int lineNumber, string? query = null)
     {
         await OpenFileFromPathAsync(path);
         if (lineNumber > 0 && CurrentPane is { } pane)
-            await pane.RevealLineAsync(lineNumber);
+            await pane.RevealLineAsync(lineNumber, query);
     }
 
     private void OnMruActivated(MruEntry entry)
@@ -377,6 +377,15 @@ public sealed partial class MainWindow : Window
 
     private async void OnToggleWordWrap(object sender, RoutedEventArgs e) =>
         await (CurrentPane?.ToggleWordWrapAsync() ?? Task.CompletedTask);
+
+    private async void OnFindInDocument(object sender, RoutedEventArgs e) =>
+        await (CurrentPane?.OpenFindAsync() ?? Task.CompletedTask);
+
+    private async void OnFindAccel(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs a)
+    {
+        a.Handled = true;
+        if (CurrentPane is { } pane) await pane.OpenFindAsync();
+    }
 
     private void OnToggleFocus(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     { ToggleFocusMode(); args.Handled = true; }
