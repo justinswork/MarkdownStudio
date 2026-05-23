@@ -164,12 +164,27 @@ public sealed partial class EditorPaneControl : UserControl
                 case "toggleFocus":
                     FocusToggleRequested?.Invoke();
                     break;
+                case "xrayApply":
+                    var xrayStart = root.GetProperty("startLine").GetInt32();
+                    var xrayEnd   = root.GetProperty("endLine").GetInt32();
+                    var xrayText  = root.GetProperty("text").GetString() ?? string.Empty;
+                    _ = ApplyXrayEditAsync(xrayStart, xrayEnd, xrayText);
+                    break;
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Preview message error: {ex}");
         }
+    }
+
+    private async Task ApplyXrayEditAsync(int startLine, int endLine, string newText)
+    {
+        if (EditorView.CoreWebView2 == null) return;
+        await _editorReady.Task;
+        var encoded = JsonSerializer.Serialize(newText);
+        await EditorView.CoreWebView2.ExecuteScriptAsync(
+            $"window.host.replaceLines({startLine}, {endLine}, {encoded});");
     }
 
     private static readonly HashSet<string> _allowedContextMenuItems =

@@ -241,6 +241,27 @@
           if (action) action.run();
         } catch (_) {}
       },
+      // Replace a range of source lines (1-based inclusive) with new text. Used
+      // by the preview's x-ray edit feature. Triggers the regular change-event
+      // pipeline so the preview re-renders normally.
+      replaceLines: function (startLine, endLine, newText) {
+        try {
+          var model = editor.getModel();
+          if (!model) return;
+          var lineCount = model.getLineCount();
+          if (startLine < 1) startLine = 1;
+          if (endLine > lineCount) endLine = lineCount;
+          if (endLine < startLine) endLine = startLine;
+          var range = new monaco.Range(
+            startLine, 1,
+            endLine,   model.getLineMaxColumn(endLine));
+          editor.executeEdits('xray', [{
+            range: range,
+            text: newText == null ? '' : newText,
+            forceMoveMarkers: true,
+          }]);
+        } catch (e) { console.error('replaceLines failed', e); }
+      },
       focus: function () { editor.focus(); },
       scrollToLine: function (line) {
         try {

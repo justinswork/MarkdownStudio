@@ -92,6 +92,122 @@ body.theme-solarized-dark .markdown-body a          { color: #268BD2; }
 body.theme-solarized-dark .markdown-body h1,
 body.theme-solarized-dark .markdown-body h2         { border-bottom-color: #14546A; }
 
+/* ----- X-ray context menu ----- */
+.mds-context-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 200px;
+  padding: 4px;
+  background: rgba(28, 28, 32, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  color: #f3f3f3;
+  font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  font-size: 13px;
+  opacity: 0;
+  transform: scale(0.97);
+  transform-origin: top left;
+  pointer-events: none;
+  transition: opacity 90ms ease, transform 90ms ease;
+}
+.mds-context-menu.visible { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+.mds-cm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 5px;
+  font: inherit;
+  text-align: left;
+}
+.mds-cm-item:hover { background: rgba(255, 255, 255, 0.10); }
+.mds-cm-icon  { width: 18px; text-align: center; opacity: 0.7; }
+.mds-cm-label { flex: 1; }
+.mds-cm-kbd {
+  font-size: 11px;
+  font-family: inherit;
+  color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+
+/* ----- X-ray editor ----- */
+.mds-xray {
+  margin: 8px 0;
+  border: 1px solid rgba(78, 161, 255, 0.45);
+  background: rgba(78, 161, 255, 0.06);
+  border-radius: 6px;
+  overflow: hidden;
+  font-family: "Cascadia Code", Consolas, "Courier New", monospace;
+  font-size: 13px;
+  box-shadow: 0 0 0 3px rgba(78, 161, 255, 0.08);
+}
+.mds-xray-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(78, 161, 255, 0.10);
+  border-bottom: 1px solid rgba(78, 161, 255, 0.20);
+  font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  font-size: 12px;
+}
+.mds-xray-label { color: inherit; opacity: 0.75; }
+.mds-xray-hint  { margin-left: auto; opacity: 0.55; font-size: 11px; }
+.mds-xray-save, .mds-xray-cancel {
+  font: inherit;
+  padding: 3px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.mds-xray-save   { background: #4ea1ff; color: #fff; }
+.mds-xray-save:hover   { background: #5fb0ff; }
+.mds-xray-cancel { background: transparent; color: inherit; border-color: rgba(0, 0, 0, 0.18); }
+.mds-xray-cancel:hover { background: rgba(0, 0, 0, 0.06); }
+.mds-xray-text {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  padding: 12px 14px;
+  border: none;
+  resize: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.55;
+  box-sizing: border-box;
+  white-space: pre;
+  overflow-x: auto;
+  tab-size: 4;
+}
+.mds-xray-saving { opacity: 0.6; pointer-events: none; }
+
+/* Dark-theme tweaks for the x-ray panel */
+body.theme-midnight .mds-xray,
+body.theme-solarized-dark .mds-xray {
+  border-color: rgba(110, 180, 255, 0.40);
+  background: rgba(110, 180, 255, 0.07);
+}
+body.theme-midnight .mds-xray-toolbar,
+body.theme-solarized-dark .mds-xray-toolbar {
+  background: rgba(110, 180, 255, 0.10);
+  border-bottom-color: rgba(110, 180, 255, 0.22);
+}
+body.theme-midnight .mds-xray-cancel,
+body.theme-solarized-dark .mds-xray-cancel { border-color: rgba(255, 255, 255, 0.18); }
+body.theme-midnight .mds-xray-cancel:hover,
+body.theme-solarized-dark .mds-xray-cancel:hover { background: rgba(255, 255, 255, 0.08); }
+
 /* ----- Common ----- */
 #link-hover-indicator {
   position: fixed;

@@ -43,12 +43,16 @@
     try { md.use(window.markdownitKatex); } catch (e) { console.warn('katex plugin failed', e); }
   }
 
-  // Stamp top-level block tokens with their source-line number so the host
-  // can map preview scroll position back to the editor.
+  // Stamp top-level block tokens with their source-line range so the host
+  // can map preview scroll position back to the editor and so x-ray edit
+  // knows which raw-markdown lines to swap in. data-line is 0-based
+  // inclusive, data-line-end is 0-based exclusive — matches markdown-it's
+  // own token.map convention.
   function injectLineNumbers(tokens, idx, options, env, slf) {
     var tok = tokens[idx];
     if (tok.map && tok.level === 0) {
-      tok.attrSet('data-line', String(tok.map[0]));
+      tok.attrSet('data-line',     String(tok.map[0]));
+      tok.attrSet('data-line-end', String(tok.map[1]));
     }
     return slf.renderToken(tokens, idx, options, env, slf);
   }
@@ -62,8 +66,9 @@
     var token = tokens[idx];
     var info = token.info ? token.info.trim() : '';
     var lang = info.split(/\s+/g)[0] || '';
-    var line = token.map ? token.map[0] : 0;
-    var attrs = ' data-line="' + line + '"';
+    var startLine = token.map ? token.map[0] : 0;
+    var endLine   = token.map ? token.map[1] : startLine + 1;
+    var attrs = ' data-line="' + startLine + '" data-line-end="' + endLine + '"';
     if (lang === 'mermaid') {
       return '<pre class="mermaid"' + attrs + '>' + escapeHtml(token.content) + '</pre>\n';
     }
@@ -149,11 +154,25 @@
     return lineMap[lineMap.length - 1].line;
   }
 
+  // -------- X-ray edit state (declared before render() so its guard works) --------
+  var xrayActive = false;
+  var xrayState  = null; // { wrap, hiddenElement, startLine, endLine }
+
+  // Latest markdown source for x-ray editing. Kept in JS so x-ray can pull
+  // raw lines without a round-trip to the host.
+  var currentSource = '';
+
   var renderTimer = null;
   function render(text) {
+    currentSource = text || '';
     if (renderTimer) clearTimeout(renderTimer);
     renderTimer = setTimeout(function () {
-      var html = md.render(text || '');
+      // If an x-ray editor is open, the user is mid-edit. Don't blow it away
+      // with a host-side re-render of stale content — the save flow handles
+      // closing it after its own edit lands.
+      if (xrayActive) return;
+
+      var html = md.render(currentSource);
       var article = document.getElementById('content');
       article.innerHTML = html;
 
@@ -218,6 +237,172 @@
     if (to && to.getAttribute('href') === a.getAttribute('href')) return;
     hoverIndicator.classList.remove('visible');
   }, true);
+
+  // -------- X-ray: right-click a block → edit raw markdown in place --------
+  // The preview owns the source text (see currentSource), so the textarea can
+  // be populated locally. On save, post xrayApply to the host and let it edit
+  // Monaco; Monaco's change event will re-render the preview normally.
+  var xrayMenu = null;
+  var xrayContextTarget = null;
+
+  function findBlock(el) {
+    while (el && el.nodeType === 1 && el !== document.body) {
+      if (el.hasAttribute && el.hasAttribute('data-line') && el.hasAttribute('data-line-end')) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function ensureXrayMenu() {
+    if (xrayMenu) return xrayMenu;
+    xrayMenu = document.createElement('div');
+    xrayMenu.className = 'mds-context-menu';
+    xrayMenu.innerHTML =
+      '<button class="mds-cm-item" data-action="xray" type="button">' +
+        '<span class="mds-cm-icon">⌧</span>' +
+        '<span class="mds-cm-label">X-ray edit</span>' +
+        '<kbd class="mds-cm-kbd">Ctrl+E</kbd>' +
+      '</button>';
+    document.body.appendChild(xrayMenu);
+    xrayMenu.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+    xrayMenu.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      hideXrayMenu();
+      if (btn.getAttribute('data-action') === 'xray' && xrayContextTarget) {
+        startXrayEdit(xrayContextTarget);
+      }
+    });
+    return xrayMenu;
+  }
+
+  function showXrayMenu(x, y, target) {
+    xrayContextTarget = target;
+    var menu = ensureXrayMenu();
+    menu.style.left = '0px';
+    menu.style.top  = '0px';
+    menu.classList.add('visible');
+    // Now we have a size, clamp inside the viewport.
+    var rect = menu.getBoundingClientRect();
+    var maxX = window.innerWidth  - rect.width  - 4;
+    var maxY = window.innerHeight - rect.height - 4;
+    menu.style.left = Math.max(0, Math.min(x, maxX)) + 'px';
+    menu.style.top  = Math.max(0, Math.min(y, maxY)) + 'px';
+  }
+
+  function hideXrayMenu() {
+    if (xrayMenu) xrayMenu.classList.remove('visible');
+    xrayContextTarget = null;
+  }
+
+  document.addEventListener('contextmenu', function (e) {
+    var block = findBlock(e.target);
+    if (!block) return;
+    e.preventDefault();
+    showXrayMenu(e.clientX, e.clientY, block);
+  });
+  document.addEventListener('mousedown', function (e) {
+    if (xrayMenu && xrayMenu.classList.contains('visible')) hideXrayMenu();
+  }, true);
+  window.addEventListener('blur', hideXrayMenu);
+  window.addEventListener('scroll', hideXrayMenu, true);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') hideXrayMenu();
+    // Ctrl+E starts x-ray on the block under the mouse, like the menu does.
+    if (e.key === 'e' && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+      var hovered = document.querySelector('[data-line]:hover');
+      var block = findBlock(hovered || document.activeElement);
+      if (block) { e.preventDefault(); startXrayEdit(block); }
+    }
+  });
+
+  function startXrayEdit(element) {
+    if (xrayActive) return;
+    var startLine = parseInt(element.getAttribute('data-line'),     10);
+    var endLine   = parseInt(element.getAttribute('data-line-end'), 10);
+    if (isNaN(startLine) || isNaN(endLine) || endLine <= startLine) return;
+
+    var lines = currentSource.split('\n');
+    var safeStart = Math.max(0, Math.min(startLine, lines.length));
+    var safeEnd   = Math.max(safeStart + 1, Math.min(endLine, lines.length));
+    var raw = lines.slice(safeStart, safeEnd).join('\n');
+
+    openXrayEditor(element, safeStart, safeEnd, raw);
+  }
+
+  function openXrayEditor(element, startLine, endLine, rawText) {
+    var wrap = document.createElement('div');
+    wrap.className = 'mds-xray';
+    wrap.innerHTML =
+      '<div class="mds-xray-toolbar">' +
+        '<span class="mds-xray-label">X-ray editing source lines ' +
+          (startLine + 1) + '–' + endLine + '</span>' +
+        '<button class="mds-xray-save"   type="button">Save</button>' +
+        '<button class="mds-xray-cancel" type="button">Cancel</button>' +
+        '<span class="mds-xray-hint">Ctrl+Enter save · Esc cancel</span>' +
+      '</div>' +
+      '<textarea class="mds-xray-text" spellcheck="false" wrap="off"></textarea>';
+
+    element.insertAdjacentElement('beforebegin', wrap);
+    element.style.display = 'none';
+
+    var textarea = wrap.querySelector('.mds-xray-text');
+    textarea.value = rawText;
+
+    function autoResize() {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.max(40, textarea.scrollHeight + 2) + 'px';
+    }
+    autoResize();
+    textarea.addEventListener('input', autoResize);
+    textarea.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); cancelXrayEditor(); }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveXrayEditor(); }
+    });
+
+    wrap.querySelector('.mds-xray-save'  ).addEventListener('click', saveXrayEditor);
+    wrap.querySelector('.mds-xray-cancel').addEventListener('click', cancelXrayEditor);
+
+    xrayState = {
+      wrap: wrap,
+      hiddenElement: element,
+      startLine: startLine,
+      endLine:   endLine,
+    };
+    xrayActive = true;
+
+    // Put cursor at start; user can Ctrl+A to select all if they want.
+    setTimeout(function () { textarea.focus(); textarea.setSelectionRange(0, 0); }, 0);
+  }
+
+  function saveXrayEditor() {
+    if (!xrayActive || !xrayState) return;
+    var text = xrayState.wrap.querySelector('.mds-xray-text').value;
+    // Convert the markdown-it style range (0-based inclusive start, 0-based
+    // exclusive end) to Monaco's 1-based inclusive convention.
+    var monacoStart = xrayState.startLine + 1;
+    var monacoEnd   = xrayState.endLine;
+    postToHost({
+      type: 'xrayApply',
+      startLine: monacoStart,
+      endLine:   monacoEnd,
+      text:      text,
+    });
+    // Mark inactive so the upcoming render() (triggered by Monaco's change
+    // event) can rebuild the DOM and our wrap disappears cleanly.
+    xrayActive = false;
+    if (xrayState.wrap) xrayState.wrap.classList.add('mds-xray-saving');
+    xrayState = null;
+  }
+
+  function cancelXrayEditor() {
+    if (!xrayActive || !xrayState) return;
+    var st = xrayState;
+    xrayState = null;
+    xrayActive = false;
+    if (st.wrap && st.wrap.parentNode) st.wrap.parentNode.removeChild(st.wrap);
+    if (st.hiddenElement) st.hiddenElement.style.display = '';
+  }
 
   window.host = {
     render: render,
