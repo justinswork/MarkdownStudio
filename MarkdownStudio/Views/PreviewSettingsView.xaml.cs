@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using MarkdownStudio.Models;
 using MarkdownStudio.Services;
-using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Media;
-using Windows.UI.Text;
+using Microsoft.Web.WebView2.Core;
 
 namespace MarkdownStudio.Views;
 
@@ -19,13 +19,18 @@ public sealed partial class PreviewSettingsView : UserControl
     public IReadOnlyList<WidthPreset>        WidthList   { get; } = WidthPresets.All;
     public IReadOnlyList<HeadingStylePreset> HeadingList { get; } = HeadingStylePresets.All;
 
+    private const string VirtualHost = "markdownstudio.app";
+
     private EditorPreferencesService? _service;
     private bool _suppressEvents;
-    private List<SampleBlock> _sampleBlocks = new();
+    private bool _webViewInitialized;
+    private readonly TaskCompletionSource<bool> _previewReady = new();
+    private string _sampleText = "";
 
     public PreviewSettingsView()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
     }
 
     public void Attach(EditorPreferencesService service)
@@ -37,10 +42,71 @@ public sealed partial class PreviewSettingsView : UserControl
 
     public async Task LoadSampleAsync()
     {
-        var text = await MainWindow.GetBundledSampleAsync();
-        _sampleBlocks = ParseSampleBlocks(text);
-        RebuildPreviewStack();
-        if (_service != null) UpdateSamplePreview(_service.Preferences);
+        _sampleText = await MainWindow.GetBundledSampleAsync();
+        if (string.IsNullOrEmpty(_sampleText))
+            _sampleText = "*(Sample.md not found in the install location.)*";
+    }
+
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_webViewInitialized) return;
+        _webViewInitialized = true;
+        try { await InitializeWebViewAsync(); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PreviewSettingsView WebView init failed: {ex}");
+        }
+    }
+
+    private async Task InitializeWebViewAsync()
+    {
+        await PreviewWebView.EnsureCoreWebView2Async();
+
+        var webRoot = Path.Combine(AppContext.BaseDirectory, "Web");
+        PreviewWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+            VirtualHost, webRoot, CoreWebView2HostResourceAccessKind.Allow);
+        PreviewWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+        PreviewWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+        PreviewWebView.WebMessageReceived += OnWebMessage;
+
+        var prefs = _service?.Preferences ?? new EditorPreferences();
+        var themeClass = (Application.Current?.RequestedTheme ?? ApplicationTheme.Light) == ApplicationTheme.Dark
+            ? "theme-midnight" : "theme-daylight";
+
+        var qs = new List<string>
+        {
+            $"theme={Uri.EscapeDataString(themeClass)}",
+            $"pfSize={prefs.PreviewFontSize}",
+            $"pfLh={prefs.PreviewLineHeight.ToString(CultureInfo.InvariantCulture)}",
+            $"pfWidth={Uri.EscapeDataString(prefs.PreviewWidth.CssMaxWidth)}",
+            $"pfHead={Uri.EscapeDataString(prefs.PreviewHeadingStyle.CssClass)}",
+            $"pfFamily={Uri.EscapeDataString(prefs.PreviewFont.CssFamily)}",
+        };
+        PreviewWebView.CoreWebView2.Navigate(
+            $"https://{VirtualHost}/preview/index.html?{string.Join("&", qs)}");
+    }
+
+    private void OnWebMessage(WebView2 sender, CoreWebView2WebMessageReceivedEventArgs args)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(args.WebMessageAsJson);
+            if (doc.RootElement.TryGetProperty("type", out var type) && type.GetString() == "ready")
+            {
+                _previewReady.TrySetResult(true);
+                _ = OnPreviewReadyAsync();
+            }
+        }
+        catch { /* ignore */ }
+    }
+
+    private async Task OnPreviewReadyAsync()
+    {
+        if (string.IsNullOrEmpty(_sampleText)) _sampleText = await MainWindow.GetBundledSampleAsync();
+        var encoded = JsonSerializer.Serialize(_sampleText ?? string.Empty);
+        await PreviewWebView.CoreWebView2.ExecuteScriptAsync($"window.host.render({encoded});");
+        LoadingRing.IsActive = false;
+        LoadingRing.Visibility = Visibility.Collapsed;
     }
 
     private void ApplyPreferencesToUi(EditorPreferences prefs)
@@ -52,15 +118,29 @@ public sealed partial class PreviewSettingsView : UserControl
             SelectByIdInto(WidthCombo,   WidthList,   prefs.PreviewWidthId,       p => p.Id);
             SelectByIdInto(HeadingCombo, HeadingList, prefs.PreviewHeadingId,     p => p.Id);
 
-            FontSizeSlider.Value = prefs.PreviewFontSize;
-            FontSizeText.Text    = $"{prefs.PreviewFontSize} pt";
-
+            FontSizeSlider.Value   = prefs.PreviewFontSize;
+            FontSizeText.Text      = $"{prefs.PreviewFontSize} pt";
             LineHeightSlider.Value = prefs.PreviewLineHeight;
             LineHeightText.Text    = prefs.PreviewLineHeight.ToString("0.0", CultureInfo.InvariantCulture);
-
-            UpdateSamplePreview(prefs);
         }
         finally { _suppressEvents = false; }
+
+        _ = PushPrefsToPreviewAsync(prefs);
+    }
+
+    private async Task PushPrefsToPreviewAsync(EditorPreferences prefs)
+    {
+        if (PreviewWebView.CoreWebView2 == null || !_previewReady.Task.IsCompleted) return;
+        var payload = JsonSerializer.Serialize(new
+        {
+            fontFamily   = prefs.PreviewFont.CssFamily,
+            fontSize     = prefs.PreviewFontSize,
+            lineHeight   = prefs.PreviewLineHeight,
+            width        = prefs.PreviewWidth.CssMaxWidth,
+            headingClass = prefs.PreviewHeadingStyle.CssClass,
+        });
+        await PreviewWebView.CoreWebView2.ExecuteScriptAsync(
+            $"window.host.setPreviewOptions({payload});");
     }
 
     private static void SelectByIdInto<T>(
@@ -71,195 +151,6 @@ public sealed partial class PreviewSettingsView : UserControl
             if (idOf(list[i]) == id) { combo.SelectedIndex = i; return; }
         }
     }
-
-    // -------- Sample-driven preview --------
-
-    private enum SampleBlockKind { H1, H2, H3, Body, Quote, Code }
-    private sealed record SampleBlock(SampleBlockKind Kind, string Text);
-
-    // Lightweight markdown-ish extraction: pulls out a few headings, body
-    // paragraphs, and a blockquote from the sample so the right-hand panel
-    // demonstrates the chosen typography on real content.
-    private static List<SampleBlock> ParseSampleBlocks(string sample)
-    {
-        var blocks = new List<SampleBlock>();
-        if (string.IsNullOrEmpty(sample)) return blocks;
-
-        var lines = sample.Replace("\r\n", "\n").Split('\n');
-        var buf = new System.Text.StringBuilder();
-        bool inCode = false;
-
-        void FlushBody()
-        {
-            if (buf.Length == 0) return;
-            blocks.Add(new SampleBlock(SampleBlockKind.Body, buf.ToString().Trim()));
-            buf.Clear();
-        }
-
-        foreach (var raw in lines)
-        {
-            var line = raw.TrimEnd();
-            if (line.StartsWith("```"))
-            {
-                FlushBody();
-                inCode = !inCode;
-                continue;
-            }
-            if (inCode) continue;
-            if (string.IsNullOrWhiteSpace(line))
-            {
-                FlushBody();
-                continue;
-            }
-            if (line.StartsWith("# "))
-            {
-                FlushBody();
-                blocks.Add(new SampleBlock(SampleBlockKind.H1, line.Substring(2).Trim()));
-                continue;
-            }
-            if (line.StartsWith("## "))
-            {
-                FlushBody();
-                blocks.Add(new SampleBlock(SampleBlockKind.H2, line.Substring(3).Trim()));
-                continue;
-            }
-            if (line.StartsWith("### "))
-            {
-                FlushBody();
-                blocks.Add(new SampleBlock(SampleBlockKind.H3, line.Substring(4).Trim()));
-                continue;
-            }
-            if (line.StartsWith("> [!"))
-            {
-                FlushBody();
-                var t = line.Substring(line.IndexOf(']') + 1).Trim();
-                blocks.Add(new SampleBlock(SampleBlockKind.Quote, t));
-                continue;
-            }
-            if (line.StartsWith("> "))
-            {
-                FlushBody();
-                blocks.Add(new SampleBlock(SampleBlockKind.Quote, line.Substring(2).Trim()));
-                continue;
-            }
-            if (line.StartsWith("- ") || line.StartsWith("* "))
-            {
-                // skip list markers for the inline preview
-                continue;
-            }
-            if (buf.Length > 0) buf.Append(' ');
-            buf.Append(line);
-        }
-        FlushBody();
-
-        // Trim the preview to the first interesting slice.
-        if (blocks.Count > 10) blocks = blocks.GetRange(0, 10);
-        return blocks;
-    }
-
-    private void RebuildPreviewStack()
-    {
-        PreviewStack.Children.Clear();
-        foreach (var block in _sampleBlocks)
-        {
-            var tb = new TextBlock
-            {
-                Text = block.Text,
-                TextWrapping = TextWrapping.Wrap,
-                IsTextSelectionEnabled = true,
-            };
-            tb.Tag = block.Kind; // restyled in UpdateSamplePreview
-            PreviewStack.Children.Add(tb);
-        }
-    }
-
-    private void UpdateSamplePreview(EditorPreferences prefs)
-    {
-        if (_sampleBlocks.Count == 0) return;
-        if (PreviewStack.Children.Count == 0) RebuildPreviewStack();
-
-        // CssFamily uses CSS syntax (single quotes, generic keywords like
-        // "sans-serif") that XAML's FontFamily parser doesn't accept; strip
-        // those before handing it to a new FontFamily.
-        var family = new FontFamily(SettingsView.CssFontFamilyToXaml(prefs.PreviewFont.CssFamily));
-        var baseSize   = prefs.PreviewFontSize;
-        var lineHeight = baseSize * prefs.PreviewLineHeight;
-
-        // Heading style preset → weight + scale factors.
-        var headingId = prefs.PreviewHeadingId;
-        double h1Scale, h2Scale, h3Scale;
-        FontWeight headingWeight;
-        Thickness h1Margin, h2Margin, h3Margin;
-        switch (headingId)
-        {
-            case "minimal":
-                h1Scale = 1.7; h2Scale = 1.35; h3Scale = 1.15;
-                headingWeight = FontWeights.Medium;
-                h1Margin = new Thickness(0, 12, 0, 4);
-                h2Margin = new Thickness(0, 10, 0, 4);
-                h3Margin = new Thickness(0,  8, 0, 4);
-                break;
-            case "display":
-                h1Scale = 2.4; h2Scale = 1.8; h3Scale = 1.4;
-                headingWeight = FontWeights.Bold;
-                h1Margin = new Thickness(0, 18, 0, 10);
-                h2Margin = new Thickness(0, 16, 0, 8);
-                h3Margin = new Thickness(0, 14, 0, 6);
-                break;
-            default: // standard
-                h1Scale = 1.9; h2Scale = 1.45; h3Scale = 1.2;
-                headingWeight = FontWeights.SemiBold;
-                h1Margin = new Thickness(0, 12, 0, 8);
-                h2Margin = new Thickness(0, 12, 0, 6);
-                h3Margin = new Thickness(0, 10, 0, 4);
-                break;
-        }
-
-        var bodyMargin  = new Thickness(0, 0, 0, 10);
-        var quoteMargin = new Thickness(0, 4, 0, 10);
-
-        foreach (var child in PreviewStack.Children)
-        {
-            if (child is not TextBlock tb || tb.Tag is not SampleBlockKind kind) continue;
-            tb.FontFamily = family;
-            tb.LineHeight = lineHeight;
-
-            switch (kind)
-            {
-                case SampleBlockKind.H1:
-                    tb.FontSize   = baseSize * h1Scale;
-                    tb.FontWeight = headingWeight;
-                    tb.Margin     = h1Margin;
-                    break;
-                case SampleBlockKind.H2:
-                    tb.FontSize   = baseSize * h2Scale;
-                    tb.FontWeight = headingWeight;
-                    tb.Margin     = h2Margin;
-                    break;
-                case SampleBlockKind.H3:
-                    tb.FontSize   = baseSize * h3Scale;
-                    tb.FontWeight = headingWeight;
-                    tb.Margin     = h3Margin;
-                    break;
-                case SampleBlockKind.Quote:
-                    tb.FontSize   = baseSize;
-                    tb.FontWeight = FontWeights.Normal;
-                    tb.FontStyle  = FontStyle.Italic;
-                    tb.Margin     = quoteMargin;
-                    tb.Opacity    = 0.82;
-                    break;
-                case SampleBlockKind.Body:
-                default:
-                    tb.FontSize   = baseSize;
-                    tb.FontWeight = FontWeights.Normal;
-                    tb.Margin     = bodyMargin;
-                    tb.Opacity    = 1.0;
-                    break;
-            }
-        }
-    }
-
-    // -------- Control handlers --------
 
     private void OnFontChanged(object sender, SelectionChangedEventArgs e)
     {

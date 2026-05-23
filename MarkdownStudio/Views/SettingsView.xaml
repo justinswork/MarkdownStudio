@@ -3,7 +3,8 @@
     x:Class="MarkdownStudio.Views.SettingsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:models="using:MarkdownStudio.Models">
+    xmlns:models="using:MarkdownStudio.Models"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls">
 
     <Grid ColumnSpacing="24" Padding="20,16,20,16">
         <Grid.ColumnDefinitions>
@@ -69,21 +70,26 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Right: live source-style preview using Sample.md -->
-        <StackPanel Grid.Column="1" Spacing="6">
-            <TextBlock Style="{StaticResource MdsCaptionStyle}" Text="Preview · Sample.md as source" />
-            <Border Background="{ThemeResource MdsSurfaceBrush}"
+        <!-- Right: real Monaco rendering Sample.md in read-only mode -->
+        <Grid Grid.Column="1" RowSpacing="6">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" Style="{StaticResource MdsCaptionStyle}"
+                       Text="Preview · Sample.md in a read-only editor" />
+            <Border Grid.Row="1"
+                    Background="{ThemeResource MdsSurfaceBrush}"
                     BorderBrush="{ThemeResource MdsBorderBrush}" BorderThickness="1"
                     CornerRadius="6">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Auto"
-                              Padding="14,12">
-                    <TextBlock x:Name="SamplePreview"
-                               IsTextSelectionEnabled="True"
-                               TextWrapping="NoWrap"
-                               Text="(Sample preview will appear here.)" />
-                </ScrollViewer>
+                <Grid>
+                    <controls:WebView2 x:Name="EditorWebView" />
+                    <ProgressRing x:Name="LoadingRing" IsActive="True"
+                                  Width="32" Height="32"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center" />
+                </Grid>
             </Border>
-        </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

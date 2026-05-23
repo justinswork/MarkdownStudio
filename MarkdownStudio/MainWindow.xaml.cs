@@ -185,15 +185,16 @@ public sealed partial class MainWindow : Window
         await dlg.ShowAsync();
     }
 
-    private static async Task<string> LoadBundledSampleAsync()
+    private static string? _cachedSample;
+    internal static async Task<string> GetBundledSampleAsync()
     {
+        if (_cachedSample != null) return _cachedSample;
         var path = Path.Combine(AppContext.BaseDirectory, "Samples", "Sample.md");
-        if (!File.Exists(path)) return string.Empty;
-        try { return await File.ReadAllTextAsync(path); }
-        catch { return string.Empty; }
+        if (!File.Exists(path)) return _cachedSample = string.Empty;
+        try { _cachedSample = await File.ReadAllTextAsync(path); }
+        catch { _cachedSample = string.Empty; }
+        return _cachedSample;
     }
-
-    internal static Task<string> GetBundledSampleAsync() => LoadBundledSampleAsync();
 
     // ---- Theme ----
     private void ApplyTheme(AppTheme theme)

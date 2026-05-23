@@ -14,11 +14,12 @@
     var size = parseInt(params.get('size'), 10);
     var tab  = parseInt(params.get('tab'),  10);
     return {
-      theme:  params.get('theme')  || 'ms-daylight',
-      family: params.get('family') || "Cascadia Code, Consolas, 'Courier New', monospace",
-      size:   isNaN(size) ? 14 : size,
-      tab:    isNaN(tab)  ? 2  : tab,
-      ws:     params.get('ws') === '1',
+      theme:    params.get('theme')  || 'ms-daylight',
+      family:   params.get('family') || "Cascadia Code, Consolas, 'Courier New', monospace",
+      size:     isNaN(size) ? 14 : size,
+      tab:      isNaN(tab)  ? 2  : tab,
+      ws:       params.get('ws')       === '1',
+      readOnly: params.get('readOnly') === '1',
     };
   }
 
@@ -116,6 +117,9 @@
       detectIndentation: false,
       padding: { top: 16, bottom: 16 },
       scrollBeyondLastLine: false,
+      readOnly:    q.readOnly,
+      domReadOnly: q.readOnly,
+      contextmenu: !q.readOnly,
       'semanticHighlighting.enabled': true,
       'unicodeHighlight.ambiguousCharacters': false,
     });
