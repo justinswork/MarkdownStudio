@@ -23,6 +23,10 @@ html, body {
 body.markdown-body {
   padding: 56px 64px 96px 64px;
   box-sizing: border-box;
+  /* github-markdown.css declares font-family on .markdown-body, which beats
+     our html/body rule on specificity. Re-state it here as body.markdown-body
+     so the user's chosen preview font actually wins. */
+  font-family: var(--mds-preview-font-family);
   font-size:   var(--mds-preview-font-size);
   line-height: var(--mds-preview-line-height);
 }
@@ -34,23 +38,27 @@ body.markdown-body {
 
 /* ----- Heading style presets -----
    Standard is the github-markdown default (border under H1/H2). The other
-   two are class-based overrides on body. */
-body.headings-minimal .markdown-body h1,
-body.headings-minimal .markdown-body h2 {
+   two are class-based overrides on body. Headings live inside
+   <article id="content"> which is a child of body, so a descendant selector
+   off `body.headings-X` matches them. (Earlier selectors that nested
+   `.markdown-body` between body and the heading never matched because the
+   body itself carries the .markdown-body class.) */
+body.headings-minimal h1,
+body.headings-minimal h2 {
   border-bottom: none;
   padding-bottom: 0;
   font-weight: 500;
 }
-body.headings-minimal .markdown-body h1 { margin-top: 1.6em; margin-bottom: 0.4em; }
-body.headings-minimal .markdown-body h2 { margin-top: 1.4em; margin-bottom: 0.4em; }
-body.headings-minimal .markdown-body h3,
-body.headings-minimal .markdown-body h4,
-body.headings-minimal .markdown-body h5,
-body.headings-minimal .markdown-body h6 {
+body.headings-minimal h1 { margin-top: 1.6em; margin-bottom: 0.4em; }
+body.headings-minimal h2 { margin-top: 1.4em; margin-bottom: 0.4em; }
+body.headings-minimal h3,
+body.headings-minimal h4,
+body.headings-minimal h5,
+body.headings-minimal h6 {
   font-weight: 500;
 }
 
-body.headings-display .markdown-body h1 {
+body.headings-display h1 {
   font-size: 2.4em;
   font-weight: 700;
   letter-spacing: -0.015em;
@@ -59,7 +67,7 @@ body.headings-display .markdown-body h1 {
   border-bottom: none;
   padding-bottom: 0;
 }
-body.headings-display .markdown-body h2 {
+body.headings-display h2 {
   font-size: 1.8em;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -68,8 +76,8 @@ body.headings-display .markdown-body h2 {
   border-bottom: none;
   padding-bottom: 0;
 }
-body.headings-display .markdown-body h3 { font-size: 1.4em; font-weight: 700; margin-top: 1.2em; }
-body.headings-display .markdown-body h4 { font-size: 1.15em; font-weight: 700; }
+body.headings-display h3 { font-size: 1.4em; font-weight: 700; margin-top: 1.2em; }
+body.headings-display h4 { font-size: 1.15em; font-weight: 700; }
 
 /* ----- Daylight ----- */
 body.theme-daylight {

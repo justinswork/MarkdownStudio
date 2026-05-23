@@ -15,7 +15,8 @@
         <x:Double x:Key="ContentDialogMinWidth">900</x:Double>
     </ContentDialog.Resources>
 
-    <Grid Width="1080" Height="640">
+    <Grid Width="1080" Height="640"
+          Background="{ThemeResource MdsWindowBrush}">
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Key="Escape" Invoked="OnEscape" />
         </Grid.KeyboardAccelerators>
