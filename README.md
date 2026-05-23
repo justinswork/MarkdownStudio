@@ -29,30 +29,12 @@ Under the hood, X-ray uses markdown-it's source-map metadata to tag every render
 
 ## Other features
 
-**Workspace & files**
-- Open a folder to browse its markdown files in a sidebar tree (`.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx`). Hidden directories, `.git`, `node_modules`, build outputs are all skipped.
-- Open individual files into tabs.
-- A **Welcome** tab with two-column layout: hero + actions on the left, a combined **Recent** list (folders and files mixed, kind-aware icon) on the right.
-- MRU persists across sessions.
-- Save / Don't save / Cancel prompt on close, per-tab and on app exit.
-
-**Editor & preview**
-- **Monaco** as the editor — full keyboard, syntax highlighting, find/replace, minimap, ligatures.
-- **Three view modes** in a segmented control on the top-right: **Editor / Split / Preview**. New blank files always open in Editor. Mode choice persists across sessions and applies to every open tab.
-- Markdown rendered via **markdown-it** with GFM tables, task lists, footnotes, **KaTeX math**, **Mermaid diagrams**, and syntax-highlighted code blocks via highlight.js.
-- **Editor ↔ Preview scroll sync.**
-- **Chrome-style URL hint** in the bottom-left when you hover a link in the preview.
-
-**Outline & search**
-- **Outline** sidebar: live table of contents parsed from your headings, click to jump.
-- **Search** sidebar: searches file names *and* file contents across the opened folder. Debounced, cancellable, grouped by file.
-
-**Themes & polish**
-- Six curated themes: **Follow System**, **Daylight**, **Midnight**, **Sepia**, **Solarized Light**, **Solarized Dark**. Selection persists.
-- Custom Monaco themes matching each app theme; preview CSS adapts in lockstep.
-- **Mica** window backdrop on Win11; caption (min/max/close) button colors follow the theme.
-- **Settings** pane: editor font preset (Cascadia Code, Consolas, Fira Code, JetBrains Mono, Source Code Pro, Courier New, Segoe UI Mono), font size 10–28, tab size 1–8 — all live-applied to every open tab.
-- **Distraction-free mode** (F11): hides rail, sidebar, tab strip, toolbar, status bar.
+- **Markdown-only file tree.** Open any folder and the sidebar shows just the `.md`/`.markdown`/`.mdown`/`.mkd`/`.mdx` files — `.git`, `node_modules`, build output and the rest stay out of the way.
+- **Rich preview** — GFM tables, task lists, footnotes, **KaTeX** math, **Mermaid** diagrams, syntax-highlighted code blocks, and editor ↔ preview scroll sync.
+- **Live outline sidebar** parsed from your headings, click to jump.
+- **Full-text + file-name search** across the opened folder, grouped by file.
+- **Six themes** — Follow System, Daylight, Midnight, Sepia, Solarized Light, Solarized Dark — each one re-themes the editor and preview palettes together.
+- **Distraction-free mode** (F11): hides everything but the editing surface.
 
 ---
 
