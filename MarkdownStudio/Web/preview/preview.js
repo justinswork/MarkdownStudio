@@ -18,7 +18,10 @@
                       'theme-solarized-light', 'theme-solarized-dark'];
 
   var md = window.markdownit({
-    html: false,
+    // html: true lets HTML comments be stripped (instead of escaped + rendered
+    // as text), and allows inline HTML like <a name="anchor"></a> in
+    // documentation files to work as intended.
+    html: true,
     linkify: true,
     typographer: true,
     breaks: false,
@@ -41,6 +44,13 @@
   if (window.markdownitFootnote) md.use(window.markdownitFootnote);
   if (window.markdownitKatex) {
     try { md.use(window.markdownitKatex); } catch (e) { console.warn('katex plugin failed', e); }
+  }
+  // markdown-it-emoji ships as { full, light, bare } in v3; the bare bundle
+  // exposes a global `markdownitEmoji` factory we can apply directly.
+  var emojiPlugin = window.markdownitEmoji
+    && (window.markdownitEmoji.full || window.markdownitEmoji.light || window.markdownitEmoji);
+  if (emojiPlugin) {
+    try { md.use(emojiPlugin); } catch (e) { console.warn('emoji plugin failed', e); }
   }
 
   // Stamp top-level block tokens with their source-line range so the host
@@ -158,6 +168,39 @@
   var xrayActive = false;
   var xrayState  = null; // { wrap, hiddenElement, startLine, endLine }
 
+  // -------- GitHub-style blockquote alerts --------
+  // Recognises blockquotes whose first paragraph starts with [!NOTE], [!TIP],
+  // [!IMPORTANT], [!WARNING], or [!CAUTION] and restyles them with a title
+  // and accent colour, matching how github.com renders the same syntax.
+  var GH_ALERT_TYPES = {
+    'NOTE':      { label: 'Note',      cls: 'mds-alert-note' },
+    'TIP':       { label: 'Tip',       cls: 'mds-alert-tip' },
+    'IMPORTANT': { label: 'Important', cls: 'mds-alert-important' },
+    'WARNING':   { label: 'Warning',   cls: 'mds-alert-warning' },
+    'CAUTION':   { label: 'Caution',   cls: 'mds-alert-caution' },
+  };
+  function applyGitHubAlerts(article) {
+    var quotes = article.querySelectorAll('blockquote');
+    for (var i = 0; i < quotes.length; i++) {
+      var q = quotes[i];
+      if (q.classList.contains('mds-alert')) continue;
+      var firstP = q.querySelector(':scope > p');
+      if (!firstP) continue;
+      // The first thing inside the <p> should be a literal [!TYPE] marker.
+      var m = firstP.innerHTML.match(/^\s*\[!([A-Z]+)\]\s*(?:<br\s*\/?>\s*)?/);
+      if (!m) continue;
+      var info = GH_ALERT_TYPES[m[1]];
+      if (!info) continue;
+      q.classList.add('mds-alert', info.cls);
+      firstP.innerHTML = firstP.innerHTML.substring(m[0].length);
+      var title = document.createElement('div');
+      title.className = 'mds-alert-title';
+      title.textContent = info.label;
+      q.insertBefore(title, q.firstChild);
+      if (!firstP.innerHTML.trim()) firstP.remove();
+    }
+  }
+
   // Latest markdown source for x-ray editing. Kept in JS so x-ray can pull
   // raw lines without a round-trip to the host.
   var currentSource = '';
@@ -175,6 +218,8 @@
       var html = md.render(currentSource);
       var article = document.getElementById('content');
       article.innerHTML = html;
+
+      applyGitHubAlerts(article);
 
       if (window.mermaid && window.mermaid.run) {
         try { window.mermaid.run({ nodes: article.querySelectorAll('pre.mermaid') }); }

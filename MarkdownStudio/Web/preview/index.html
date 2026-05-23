@@ -3,6 +3,25 @@
 <head>
 <meta charset="utf-8" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<!--
+  Content Security Policy. Markdown allows raw HTML (html: true) so users
+  can use comments, anchor tags, etc. in their files — but inline <script>
+  embedded in untrusted markdown must not execute against our host bridge
+  (chrome.webview.postMessage), which would otherwise let a malicious .md
+  rewrite the open document via xrayApply. Allow only same-origin scripts
+  (our preview.js + lib/), permit inline styles (we set some in JS), allow
+  images from anywhere + data: URIs, block iframes / objects / fetch.
+-->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self';
+               style-src 'self' 'unsafe-inline';
+               img-src 'self' data: https: http:;
+               font-src 'self' data:;
+               connect-src 'none';
+               frame-src 'none';
+               object-src 'none';
+               base-uri 'none';" />
 <title>Preview</title>
 <link rel="stylesheet" href="./lib/github-markdown.css" />
 <link rel="stylesheet" href="./lib/highlight.css" />
@@ -15,6 +34,7 @@
 <script src="./lib/markdown-it.min.js"></script>
 <script src="./lib/markdown-it-task-lists.min.js"></script>
 <script src="./lib/markdown-it-footnote.min.js"></script>
+<script src="./lib/markdown-it-emoji.min.js"></script>
 <script src="./lib/highlight.min.js"></script>
 <script src="./lib/katex.min.js"></script>
 <script src="./lib/markdown-it-katex.min.js"></script>

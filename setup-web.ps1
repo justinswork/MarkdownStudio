@@ -67,6 +67,14 @@ try {
     if (-not (Test-Path $footJs)) { $footJs = Join-Path $footPkg 'dist\markdown-it-footnote.js' }
     Copy-Item -Force -Path $footJs -Destination (Join-Path $previewLibDir 'markdown-it-footnote.min.js')
 
+    # ---- markdown-it-emoji (full set: :smile: :octocat: etc.) ----
+    $emojiPkg = Get-NpmPackage -Name 'markdown-it-emoji' -Version '3.0.0'
+    $emojiJs  = Join-Path $emojiPkg 'dist\markdown-it-emoji.min.js'
+    if (-not (Test-Path $emojiJs)) {
+        $emojiJs = Join-Path $emojiPkg 'dist\markdown-it-emoji.bare.min.js'
+    }
+    Copy-Item -Force -Path $emojiJs -Destination (Join-Path $previewLibDir 'markdown-it-emoji.min.js')
+
     # ---- KaTeX ----
     $katexPkg = Get-NpmPackage -Name 'katex' -Version '0.16.11'
     Copy-Item -Force -Path (Join-Path $katexPkg 'dist\katex.min.js')  -Destination (Join-Path $previewLibDir 'katex.min.js')
