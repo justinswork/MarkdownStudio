@@ -464,6 +464,19 @@ public sealed partial class MainWindow : Window
         SetSidebarPane(ActivityPane.Files);
         _fileTreeView.PulseFolderBanner();
         StatusText.Text = $"Opened folder: {Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar))}";
+        UpdateRailVisibility();
+    }
+
+    // Gate the Search / Outline rail buttons by app state:
+    //   Search  — visible once any file or folder has been opened.
+    //   Outline — visible only while an editor tab (not Welcome) is active.
+    private void UpdateRailVisibility()
+    {
+        var folderOpen   = !string.IsNullOrEmpty(_fileTreeView.FolderPath);
+        var hasOpenItem  = folderOpen || _panes.Count > 0;
+        var hasActiveDoc = Tabs.SelectedItem is TabViewItem item && _panes.ContainsKey(item);
+        ActivityRail.ShowSearch  = hasOpenItem;
+        ActivityRail.ShowOutline = hasActiveDoc;
     }
 
     private async Task OpenFileAtLineAsync(string path, int lineNumber, string? query = null)
@@ -751,33 +764,40 @@ public sealed partial class MainWindow : Window
 
     private void Tabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (Tabs.SelectedItem is not TabViewItem item)
+        try
         {
-            ActiveContent.Content = null;
-            DocInfoText.Text = string.Empty;
-            _outlineView.SetNodes(Array.Empty<OutlineNode>());
-            return;
+            if (Tabs.SelectedItem is not TabViewItem item)
+            {
+                ActiveContent.Content = null;
+                DocInfoText.Text = string.Empty;
+                _outlineView.SetNodes(Array.Empty<OutlineNode>());
+                return;
+            }
+
+            if (item == _welcomeTab)
+            {
+                ActiveContent.Content = _welcomeView;
+                DocInfoText.Text = "Welcome";
+                TopToolbar.Visibility = Visibility.Collapsed;
+                _outlineView.SetNodes(Array.Empty<OutlineNode>());
+                return;
+            }
+
+            if (!_focusMode) TopToolbar.Visibility = Visibility.Visible;
+
+            if (_panes.TryGetValue(item, out var pane))
+            {
+                ActiveContent.Content = pane;
+                var doc = pane.Document;
+                DocInfoText.Text = doc?.FilePath != null
+                    ? $"Markdown · UTF-8 · {Path.GetFileName(doc.FilePath)}"
+                    : "Markdown · UTF-8";
+                _outlineView.SetNodes(OutlineService.Parse(pane.Document?.Content ?? string.Empty));
+            }
         }
-
-        if (item == _welcomeTab)
+        finally
         {
-            ActiveContent.Content = _welcomeView;
-            DocInfoText.Text = "Welcome";
-            TopToolbar.Visibility = Visibility.Collapsed;
-            _outlineView.SetNodes(Array.Empty<OutlineNode>());
-            return;
-        }
-
-        if (!_focusMode) TopToolbar.Visibility = Visibility.Visible;
-
-        if (_panes.TryGetValue(item, out var pane))
-        {
-            ActiveContent.Content = pane;
-            var doc = pane.Document;
-            DocInfoText.Text = doc?.FilePath != null
-                ? $"Markdown · UTF-8 · {Path.GetFileName(doc.FilePath)}"
-                : "Markdown · UTF-8";
-            _outlineView.SetNodes(OutlineService.Parse(pane.Document?.Content ?? string.Empty));
+            UpdateRailVisibility();
         }
     }
 }

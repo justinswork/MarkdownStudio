@@ -24,13 +24,15 @@
 
             <ToggleButton x:Name="SearchBtn" Click="OnPaneClicked"
                           Style="{StaticResource MdsRailToggleStyle}" Tag="search"
-                          ToolTipService.ToolTip="Search (Ctrl+Shift+F)">
+                          ToolTipService.ToolTip="Search (Ctrl+Shift+F)"
+                          Visibility="Collapsed">
                 <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE721;" FontSize="16" />
             </ToggleButton>
 
             <ToggleButton x:Name="OutlineBtn" Click="OnPaneClicked"
                           Style="{StaticResource MdsRailToggleStyle}" Tag="outline"
-                          ToolTipService.ToolTip="Outline (Ctrl+Shift+O)">
+                          ToolTipService.ToolTip="Outline (Ctrl+Shift+O)"
+                          Visibility="Collapsed">
                 <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xEA37;" FontSize="16" />
             </ToggleButton>
 

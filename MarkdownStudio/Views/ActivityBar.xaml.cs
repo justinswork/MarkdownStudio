@@ -30,6 +30,32 @@ public sealed partial class ActivityBar : UserControl
         }
     }
 
+    // Visibility gating. Search appears once a file or folder is opened;
+    // Outline only when there's an editor tab active. If the active pane is
+    // the one being hidden, collapse the sidebar so the user isn't stuck on
+    // an invisible tab.
+    public bool ShowSearch
+    {
+        get => SearchBtn.Visibility == Visibility.Visible;
+        set => SetButtonVisibility(SearchBtn, ActivityPane.Search, value);
+    }
+    public bool ShowOutline
+    {
+        get => OutlineBtn.Visibility == Visibility.Visible;
+        set => SetButtonVisibility(OutlineBtn, ActivityPane.Outline, value);
+    }
+
+    private void SetButtonVisibility(ToggleButton btn, ActivityPane pane, bool visible)
+    {
+        btn.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        if (!visible && _current == pane)
+        {
+            _current = ActivityPane.None;
+            SetChecks(ActivityPane.None);
+            PaneSelected?.Invoke(ActivityPane.None);
+        }
+    }
+
     private void SetChecks(ActivityPane active)
     {
         FilesBtn.IsChecked    = active == ActivityPane.Files;
