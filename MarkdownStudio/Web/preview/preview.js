@@ -244,6 +244,7 @@
   // Monaco; Monaco's change event will re-render the preview normally.
   var xrayMenu = null;
   var xrayContextBlocks = null;       // array of block elements the menu acts on
+  var xrayContextClick  = null;       // { x, y } of the originating right-click, or null
 
   function findBlock(el) {
     while (el && el.nodeType === 1 && el !== document.body) {
@@ -285,6 +286,80 @@
     return leaves;
   }
 
+  // Map a viewport (x, y) under one of the selected blocks back to a character
+  // offset within the combined raw markdown source for those blocks.
+  //
+  // Approach: find the word under the click in the rendered DOM, count how
+  // many times that same word appears in the rendered text BEFORE the clicked
+  // instance, then locate the Nth occurrence of the word in the raw source
+  // slice. Cursor lands at match-start + offset-within-word. Markdown syntax
+  // around the word (e.g. **, [text](url)) is naturally skipped because we
+  // match on visible words only.
+  function clickToSourceOffset(blocks, clickX, clickY, rawText) {
+    if (!document.caretRangeFromPoint) return null;
+    var range = document.caretRangeFromPoint(clickX, clickY);
+    if (!range) return null;
+    var node = range.startContainer;
+    if (!node || node.nodeType !== 3) return null;
+
+    var inOurBlocks = false;
+    for (var i = 0; i < blocks.length; i++) {
+      if (blocks[i].contains(node)) { inOurBlocks = true; break; }
+    }
+    if (!inOurBlocks) return null;
+
+    var text = node.textContent;
+    var off  = range.startOffset;
+
+    var wordRe = /[\p{L}\p{N}_'\-]/u;
+    var wStart = off;
+    while (wStart > 0           && wordRe.test(text.charAt(wStart - 1))) wStart--;
+    var wEnd   = off;
+    while (wEnd   < text.length && wordRe.test(text.charAt(wEnd)))       wEnd++;
+
+    if (wStart === wEnd) return null; // click landed in whitespace / punctuation
+    var word         = text.substring(wStart, wEnd);
+    var offsetInWord = off - wStart;
+
+    var escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Whole-word: not flanked by another word character. Use lookarounds rather
+    // than \b so we agree with our own word-char definition (Unicode + hyphen).
+    var bound = '(?<![\\p{L}\\p{N}_])' + escaped + '(?![\\p{L}\\p{N}_])';
+
+    // Count occurrences of the word in the rendered text of the blocks BEFORE
+    // the clicked word's start.
+    var prefixRe   = new RegExp(bound, 'gu');
+    var before     = 0;
+    var foundClick = false;
+    for (var b = 0; b < blocks.length && !foundClick; b++) {
+      var walker = document.createTreeWalker(blocks[b], NodeFilter.SHOW_TEXT, null);
+      var n;
+      while ((n = walker.nextNode())) {
+        if (n === node) {
+          var prefix = n.textContent.substring(0, wStart);
+          var pm = prefix.match(prefixRe);
+          before += pm ? pm.length : 0;
+          foundClick = true;
+          break;
+        }
+        var pm2 = n.textContent.match(prefixRe);
+        before += pm2 ? pm2.length : 0;
+      }
+    }
+
+    // Find every occurrence of the word in the raw source slice.
+    var srcRe = new RegExp(bound, 'gu');
+    var matches = [];
+    var m;
+    while ((m = srcRe.exec(rawText)) !== null) {
+      matches.push(m.index);
+      if (m.index === srcRe.lastIndex) srcRe.lastIndex++; // safety against zero-width
+    }
+    if (before >= matches.length) return null;
+
+    return matches[before] + offsetInWord;
+  }
+
   // Compute the source line range covering one or more blocks.
   function rangeForBlocks(blocks) {
     var minStart = Infinity, maxEnd = -Infinity;
@@ -318,11 +393,12 @@
     xrayMenu.addEventListener('click', function (e) {
       var btn = e.target.closest('[data-action]');
       if (!btn) return;
-      // Capture target BEFORE hiding (hideXrayMenu clears it).
+      // Capture state BEFORE hiding (hideXrayMenu clears it).
       var blocks = xrayContextBlocks;
+      var click  = xrayContextClick;
       hideXrayMenu();
       if (btn.getAttribute('data-action') === 'xray' && blocks && blocks.length) {
-        startXrayEdit(blocks);
+        startXrayEdit(blocks, click);
       }
     });
     return xrayMenu;
@@ -330,6 +406,7 @@
 
   function showXrayMenu(x, y, blocks) {
     xrayContextBlocks = blocks;
+    xrayContextClick  = { x: x, y: y };
     var menu = ensureXrayMenu();
     // Reflect a count for selections >1 by tweaking the label.
     var label = menu.querySelector('.mds-cm-label');
@@ -349,6 +426,7 @@
   function hideXrayMenu() {
     if (xrayMenu) xrayMenu.classList.remove('visible');
     xrayContextBlocks = null;
+    xrayContextClick  = null;
   }
 
   document.addEventListener('contextmenu', function (e) {
@@ -385,7 +463,7 @@
     }
   });
 
-  function startXrayEdit(blocks) {
+  function startXrayEdit(blocks, clickPoint) {
     if (xrayActive) return;
     if (!Array.isArray(blocks)) blocks = [blocks];
     if (!blocks.length) return;
@@ -397,10 +475,17 @@
     var safeEnd   = Math.max(safeStart + 1, Math.min(r.end, lines.length));
     var raw       = lines.slice(safeStart, safeEnd).join('\n');
 
-    openXrayEditor(blocks, safeStart, safeEnd, raw);
+    var initialCaret = null;
+    if (clickPoint) {
+      try {
+        initialCaret = clickToSourceOffset(blocks, clickPoint.x, clickPoint.y, raw);
+      } catch (_) { initialCaret = null; }
+    }
+
+    openXrayEditor(blocks, safeStart, safeEnd, raw, initialCaret);
   }
 
-  function openXrayEditor(blocks, startLine, endLine, rawText) {
+  function openXrayEditor(blocks, startLine, endLine, rawText, initialCaret) {
     var anchor   = blocks[0];
     var blockCnt = blocks.length;
     var rangeLbl = blockCnt > 1
@@ -449,7 +534,13 @@
     // Clear any text selection so the textarea doesn't open with it.
     try { window.getSelection().removeAllRanges(); } catch (_) {}
 
-    setTimeout(function () { textarea.focus(); textarea.setSelectionRange(0, 0); }, 0);
+    var caret = (typeof initialCaret === 'number' && initialCaret >= 0)
+      ? Math.min(initialCaret, rawText.length)
+      : 0;
+    setTimeout(function () {
+      textarea.focus();
+      textarea.setSelectionRange(caret, caret);
+    }, 0);
   }
 
   function saveXrayEditor() {
