@@ -243,7 +243,7 @@
   // be populated locally. On save, post xrayApply to the host and let it edit
   // Monaco; Monaco's change event will re-render the preview normally.
   var xrayMenu = null;
-  var xrayContextTarget = null;
+  var xrayContextBlocks = null;       // array of block elements the menu acts on
 
   function findBlock(el) {
     while (el && el.nodeType === 1 && el !== document.body) {
@@ -251,6 +251,51 @@
       el = el.parentElement;
     }
     return null;
+  }
+
+  // Find every [data-line] block that the current text selection intersects.
+  // Returns null when the selection is empty / collapsed / outside #content.
+  function findBlocksInSelection() {
+    var sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
+    var range   = sel.getRangeAt(0);
+    var article = document.getElementById('content');
+    if (!article || !range.intersectsNode(article)) return null;
+    var hits = [];
+    var all  = article.querySelectorAll('[data-line][data-line-end]');
+    for (var i = 0; i < all.length; i++) {
+      if (range.intersectsNode(all[i])) hits.push(all[i]);
+    }
+    if (!hits.length) return null;
+    // Keep only innermost blocks: drop anything that contains another hit.
+    var leaves = [];
+    for (var i = 0; i < hits.length; i++) {
+      var el = hits[i], hasInnerHit = false;
+      for (var j = 0; j < hits.length; j++) {
+        if (i === j) continue;
+        if (el.contains(hits[j])) { hasInnerHit = true; break; }
+      }
+      if (!hasInnerHit) leaves.push(el);
+    }
+    // Sort top-down by source line, just in case.
+    leaves.sort(function (a, b) {
+      return (parseInt(a.getAttribute('data-line'), 10) || 0) -
+             (parseInt(b.getAttribute('data-line'), 10) || 0);
+    });
+    return leaves;
+  }
+
+  // Compute the source line range covering one or more blocks.
+  function rangeForBlocks(blocks) {
+    var minStart = Infinity, maxEnd = -Infinity;
+    for (var i = 0; i < blocks.length; i++) {
+      var s = parseInt(blocks[i].getAttribute('data-line'),     10);
+      var e = parseInt(blocks[i].getAttribute('data-line-end'), 10);
+      if (!isNaN(s) && s < minStart) minStart = s;
+      if (!isNaN(e) && e > maxEnd)   maxEnd   = e;
+    }
+    if (minStart === Infinity || maxEnd <= minStart) return null;
+    return { start: minStart, end: maxEnd };
   }
 
   function ensureXrayMenu() {
@@ -264,25 +309,36 @@
         '<kbd class="mds-cm-kbd">Ctrl+E</kbd>' +
       '</button>';
     document.body.appendChild(xrayMenu);
-    xrayMenu.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+    // Swallow mousedown / pointerdown so the outside-click dismissal doesn't
+    // fire when the user is clicking the menu itself (the document handler
+    // below also checks contains(), but defense-in-depth).
+    ['mousedown', 'pointerdown'].forEach(function (ev) {
+      xrayMenu.addEventListener(ev, function (e) { e.stopPropagation(); });
+    });
     xrayMenu.addEventListener('click', function (e) {
       var btn = e.target.closest('[data-action]');
       if (!btn) return;
+      // Capture target BEFORE hiding (hideXrayMenu clears it).
+      var blocks = xrayContextBlocks;
       hideXrayMenu();
-      if (btn.getAttribute('data-action') === 'xray' && xrayContextTarget) {
-        startXrayEdit(xrayContextTarget);
+      if (btn.getAttribute('data-action') === 'xray' && blocks && blocks.length) {
+        startXrayEdit(blocks);
       }
     });
     return xrayMenu;
   }
 
-  function showXrayMenu(x, y, target) {
-    xrayContextTarget = target;
+  function showXrayMenu(x, y, blocks) {
+    xrayContextBlocks = blocks;
     var menu = ensureXrayMenu();
+    // Reflect a count for selections >1 by tweaking the label.
+    var label = menu.querySelector('.mds-cm-label');
+    if (label) label.textContent = blocks.length > 1
+      ? 'X-ray edit (' + blocks.length + ' blocks)'
+      : 'X-ray edit';
     menu.style.left = '0px';
     menu.style.top  = '0px';
     menu.classList.add('visible');
-    // Now we have a size, clamp inside the viewport.
     var rect = menu.getBoundingClientRect();
     var maxX = window.innerWidth  - rect.width  - 4;
     var maxY = window.innerHeight - rect.height - 4;
@@ -292,59 +348,78 @@
 
   function hideXrayMenu() {
     if (xrayMenu) xrayMenu.classList.remove('visible');
-    xrayContextTarget = null;
+    xrayContextBlocks = null;
   }
 
   document.addEventListener('contextmenu', function (e) {
-    var block = findBlock(e.target);
-    if (!block) return;
+    // Prefer a multi-block text selection; fall back to the right-clicked block.
+    var blocks = findBlocksInSelection();
+    if (!blocks || !blocks.length) {
+      var block = findBlock(e.target);
+      if (block) blocks = [block];
+    }
+    if (!blocks || !blocks.length) return;
     e.preventDefault();
-    showXrayMenu(e.clientX, e.clientY, block);
+    showXrayMenu(e.clientX, e.clientY, blocks);
   });
   document.addEventListener('mousedown', function (e) {
-    if (xrayMenu && xrayMenu.classList.contains('visible')) hideXrayMenu();
+    if (!xrayMenu || !xrayMenu.classList.contains('visible')) return;
+    // Don't dismiss when the click is inside the menu — the click handler
+    // needs to fire first.
+    if (xrayMenu.contains(e.target)) return;
+    hideXrayMenu();
   }, true);
   window.addEventListener('blur', hideXrayMenu);
   window.addEventListener('scroll', hideXrayMenu, true);
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') hideXrayMenu();
-    // Ctrl+E starts x-ray on the block under the mouse, like the menu does.
+    // Ctrl+E starts x-ray on the selection (preferred) or the hovered block.
     if (e.key === 'e' && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
-      var hovered = document.querySelector('[data-line]:hover');
-      var block = findBlock(hovered || document.activeElement);
-      if (block) { e.preventDefault(); startXrayEdit(block); }
+      var blocks = findBlocksInSelection();
+      if (!blocks || !blocks.length) {
+        var hovered = document.querySelector('[data-line]:hover');
+        var block = findBlock(hovered || document.activeElement);
+        if (block) blocks = [block];
+      }
+      if (blocks && blocks.length) { e.preventDefault(); startXrayEdit(blocks); }
     }
   });
 
-  function startXrayEdit(element) {
+  function startXrayEdit(blocks) {
     if (xrayActive) return;
-    var startLine = parseInt(element.getAttribute('data-line'),     10);
-    var endLine   = parseInt(element.getAttribute('data-line-end'), 10);
-    if (isNaN(startLine) || isNaN(endLine) || endLine <= startLine) return;
+    if (!Array.isArray(blocks)) blocks = [blocks];
+    if (!blocks.length) return;
+    var r = rangeForBlocks(blocks);
+    if (!r) return;
 
-    var lines = currentSource.split('\n');
-    var safeStart = Math.max(0, Math.min(startLine, lines.length));
-    var safeEnd   = Math.max(safeStart + 1, Math.min(endLine, lines.length));
-    var raw = lines.slice(safeStart, safeEnd).join('\n');
+    var lines     = currentSource.split('\n');
+    var safeStart = Math.max(0, Math.min(r.start, lines.length));
+    var safeEnd   = Math.max(safeStart + 1, Math.min(r.end, lines.length));
+    var raw       = lines.slice(safeStart, safeEnd).join('\n');
 
-    openXrayEditor(element, safeStart, safeEnd, raw);
+    openXrayEditor(blocks, safeStart, safeEnd, raw);
   }
 
-  function openXrayEditor(element, startLine, endLine, rawText) {
+  function openXrayEditor(blocks, startLine, endLine, rawText) {
+    var anchor   = blocks[0];
+    var blockCnt = blocks.length;
+    var rangeLbl = blockCnt > 1
+      ? 'X-ray editing source lines ' + (startLine + 1) + '–' + endLine + ' (' + blockCnt + ' blocks)'
+      : 'X-ray editing source lines ' + (startLine + 1) + '–' + endLine;
+
     var wrap = document.createElement('div');
     wrap.className = 'mds-xray';
     wrap.innerHTML =
       '<div class="mds-xray-toolbar">' +
-        '<span class="mds-xray-label">X-ray editing source lines ' +
-          (startLine + 1) + '–' + endLine + '</span>' +
+        '<span class="mds-xray-label">' + rangeLbl + '</span>' +
         '<button class="mds-xray-save"   type="button">Save</button>' +
         '<button class="mds-xray-cancel" type="button">Cancel</button>' +
         '<span class="mds-xray-hint">Ctrl+Enter save · Esc cancel</span>' +
       '</div>' +
       '<textarea class="mds-xray-text" spellcheck="false" wrap="off"></textarea>';
 
-    element.insertAdjacentElement('beforebegin', wrap);
-    element.style.display = 'none';
+    anchor.insertAdjacentElement('beforebegin', wrap);
+    for (var i = 0; i < blocks.length; i++) blocks[i].style.display = 'none';
 
     var textarea = wrap.querySelector('.mds-xray-text');
     textarea.value = rawText;
@@ -365,13 +440,15 @@
 
     xrayState = {
       wrap: wrap,
-      hiddenElement: element,
+      hiddenElements: blocks.slice(),
       startLine: startLine,
       endLine:   endLine,
     };
     xrayActive = true;
 
-    // Put cursor at start; user can Ctrl+A to select all if they want.
+    // Clear any text selection so the textarea doesn't open with it.
+    try { window.getSelection().removeAllRanges(); } catch (_) {}
+
     setTimeout(function () { textarea.focus(); textarea.setSelectionRange(0, 0); }, 0);
   }
 
@@ -401,7 +478,9 @@
     xrayState = null;
     xrayActive = false;
     if (st.wrap && st.wrap.parentNode) st.wrap.parentNode.removeChild(st.wrap);
-    if (st.hiddenElement) st.hiddenElement.style.display = '';
+    if (st.hiddenElements) {
+      for (var i = 0; i < st.hiddenElements.length; i++) st.hiddenElements[i].style.display = '';
+    }
   }
 
   window.host = {
