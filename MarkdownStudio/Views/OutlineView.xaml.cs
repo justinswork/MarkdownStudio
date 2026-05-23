@@ -70,8 +70,29 @@ public sealed partial class OutlineView : UserControl
         // otherwise expand everything. Computing on click means user-driven
         // toggles of individual nodes don't desync the button intent.
         var expand = !AnyExpanded(Roots);
+
+        // Keep the model in sync (so collapse state survives a re-parse and
+        // the TwoWay binding remains consistent)…
         SetAllExpanded(Roots, expand);
+
+        // …but also drive TreeViewNode.IsExpanded directly. TwoWay binding on
+        // TreeViewItem.IsExpanded only takes effect once the container is
+        // realized, and child containers aren't realized until their parent
+        // is expanded — so a single model-side update only ever cascades one
+        // level visually. Walking RootNodes / Children covers every level
+        // including deeply nested headings.
+        SetTreeNodesExpanded(Tree.RootNodes, expand);
+
         RefreshToggleButton();
+    }
+
+    private static void SetTreeNodesExpanded(IList<TreeViewNode> nodes, bool expand)
+    {
+        foreach (var node in nodes)
+        {
+            node.IsExpanded = expand;
+            if (node.Children != null) SetTreeNodesExpanded(node.Children, expand);
+        }
     }
 
     private static bool AnyExpanded(IEnumerable<OutlineNode> nodes)
