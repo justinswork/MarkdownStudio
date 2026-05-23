@@ -9,10 +9,16 @@
 
     <!-- Override the default ContentDialog width caps so this dialog can be
          wide enough for the 2-column tab layout (320px controls + Sample.md
-         preview on the right) without crushing the preview side. -->
+         preview on the right) without crushing the preview side. Also alias
+         ContentDialogBackground / BorderBrush to our theme brushes so the
+         dialog's own popup chrome adopts the active app theme (otherwise the
+         frame around the body stays system-light even in Sepia / Solarized). -->
     <ContentDialog.Resources>
         <x:Double x:Key="ContentDialogMaxWidth">1200</x:Double>
         <x:Double x:Key="ContentDialogMinWidth">900</x:Double>
+        <StaticResource x:Key="ContentDialogBackground"  ResourceKey="MdsWindowBrush" />
+        <StaticResource x:Key="ContentDialogBorderBrush" ResourceKey="MdsBorderBrush" />
+        <StaticResource x:Key="ContentDialogForeground"  ResourceKey="MdsTextPrimaryBrush" />
     </ContentDialog.Resources>
 
     <Grid Width="1080" Height="640"
