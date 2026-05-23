@@ -19,6 +19,25 @@
         <StaticResource x:Key="ContentDialogBackground"  ResourceKey="MdsWindowBrush" />
         <StaticResource x:Key="ContentDialogBorderBrush" ResourceKey="MdsBorderBrush" />
         <StaticResource x:Key="ContentDialogForeground"  ResourceKey="MdsTextPrimaryBrush" />
+
+        <!-- Tab strip — the selected tab uses its own chrome brushes that
+             default to light-grey regardless of our window theme. Alias them
+             so the selected tab adopts a subtly lighter card on top of the
+             dialog body in every theme. -->
+        <StaticResource x:Key="TabViewBackground"
+                        ResourceKey="MdsWindowBrush" />
+        <StaticResource x:Key="TabViewItemHeaderBackgroundSelected"
+                        ResourceKey="MdsSurfaceBrush" />
+        <StaticResource x:Key="TabViewItemHeaderBackgroundSelectedPointerOver"
+                        ResourceKey="MdsSurfaceBrush" />
+        <StaticResource x:Key="TabViewItemHeaderBackgroundSelectedPressed"
+                        ResourceKey="MdsSurfaceBrush" />
+        <StaticResource x:Key="TabViewItemHeaderForegroundSelected"
+                        ResourceKey="MdsTextPrimaryBrush" />
+        <StaticResource x:Key="TabViewItemHeaderForegroundSelectedPointerOver"
+                        ResourceKey="MdsTextPrimaryBrush" />
+        <StaticResource x:Key="TabViewItemHeaderForegroundSelectedPressed"
+                        ResourceKey="MdsTextPrimaryBrush" />
     </ContentDialog.Resources>
 
     <Grid Width="1080" Height="640"
