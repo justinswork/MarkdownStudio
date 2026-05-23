@@ -14,6 +14,34 @@
     return params.get('theme') || 'theme-daylight';
   }
 
+  // Apply preview typography prefs to the root CSS vars and a heading-style
+  // class on body. Called once on load from URL query params, then by the
+  // host whenever the user changes a setting.
+  var KNOWN_HEADING_CLASSES = ['headings-standard', 'headings-minimal', 'headings-display'];
+  function applyPreviewOptions(opts) {
+    var root = document.documentElement.style;
+    if (opts.fontFamily) root.setProperty('--mds-preview-font-family', opts.fontFamily);
+    if (opts.fontSize)   root.setProperty('--mds-preview-font-size',   opts.fontSize + 'px');
+    if (opts.lineHeight) root.setProperty('--mds-preview-line-height', String(opts.lineHeight));
+    if (opts.width)      root.setProperty('--mds-preview-width',       opts.width);
+    if (opts.headingClass) {
+      KNOWN_HEADING_CLASSES.forEach(function (c) { document.body.classList.remove(c); });
+      document.body.classList.add(opts.headingClass);
+    }
+  }
+  // Initial seed from URL query params (so new tabs render with the saved
+  // settings before the host has a chance to push them).
+  (function seedFromQuery() {
+    var p = new URLSearchParams(window.location.search);
+    applyPreviewOptions({
+      fontFamily:   p.get('pfFamily') || undefined,
+      fontSize:     parseInt(p.get('pfSize'), 10) || undefined,
+      lineHeight:   parseFloat(p.get('pfLh'))     || undefined,
+      width:        p.get('pfWidth')  || undefined,
+      headingClass: p.get('pfHead')   || 'headings-standard',
+    });
+  })();
+
   var KNOWN_THEMES = ['theme-daylight', 'theme-midnight', 'theme-sepia',
                       'theme-solarized-light', 'theme-solarized-dark'];
 
@@ -675,6 +703,7 @@
   window.host = {
     render: render,
     setTheme: setTheme,
+    setPreviewOptions: applyPreviewOptions,
     scrollToLine: function (line) {
       lastSyncIn = Date.now();
       scrollToSourceLine(line);

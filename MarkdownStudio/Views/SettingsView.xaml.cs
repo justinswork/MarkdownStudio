@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using MarkdownStudio.Models;
 using MarkdownStudio.Services;
 using Microsoft.UI.Xaml;
@@ -15,6 +16,7 @@ public sealed partial class SettingsView : UserControl
 
     private EditorPreferencesService? _service;
     private bool _suppressEvents;
+    private string _sampleText = "";
 
     public SettingsView()
     {
@@ -28,12 +30,22 @@ public sealed partial class SettingsView : UserControl
         service.Changed += p => DispatcherQueue.TryEnqueue(() => ApplyPreferencesToUi(p));
     }
 
+    // Pre-loads Sample.md content for the right-side preview. Called by
+    // SettingsDialog before ShowAsync, so the textblock has content the
+    // moment the dialog opens.
+    public async Task LoadSampleAsync()
+    {
+        _sampleText = await MainWindow.GetBundledSampleAsync();
+        if (string.IsNullOrEmpty(_sampleText))
+            _sampleText = "(Sample.md not found in the install location.)";
+        SamplePreview.Text = _sampleText;
+    }
+
     private void ApplyPreferencesToUi(EditorPreferences prefs)
     {
         _suppressEvents = true;
         try
         {
-            // Font combo
             for (int i = 0; i < FontPresetsList.Count; i++)
             {
                 if (FontPresetsList[i].Id == prefs.FontPresetId)
@@ -56,8 +68,8 @@ public sealed partial class SettingsView : UserControl
 
     private void UpdatePreviewFont(EditorPreferences prefs)
     {
-        PreviewText.FontFamily = new FontFamily(prefs.Font.CssFamily);
-        PreviewText.FontSize   = prefs.FontSize;
+        SamplePreview.FontFamily = new FontFamily(prefs.Font.CssFamily);
+        SamplePreview.FontSize   = prefs.FontSize;
     }
 
     private void OnFontChanged(object sender, SelectionChangedEventArgs e)

@@ -5,20 +5,15 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:models="using:MarkdownStudio.Models">
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <Grid ColumnSpacing="24" Padding="20,16,20,16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="0" Padding="16,14,16,8" Spacing="2">
-            <TextBlock Style="{StaticResource MdsSidebarTitleStyle}" Text="SETTINGS" />
-            <TextBlock Style="{StaticResource MdsCaptionStyle}" Text="Saved across sessions." />
-        </StackPanel>
-
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="16,8,16,16">
+        <!-- Left: controls -->
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="22">
-
                 <StackPanel Spacing="6">
                     <TextBlock Style="{StaticResource MdsBodyStrongStyle}" Text="Editor font" />
                     <ComboBox x:Name="FontCombo" HorizontalAlignment="Stretch"
@@ -71,20 +66,24 @@
                     <ToggleSwitch x:Name="WhitespaceToggle" Toggled="OnWhitespaceToggled"
                                   OffContent="Off" OnContent="On" />
                 </StackPanel>
-
-                <Border BorderBrush="{ThemeResource MdsBorderBrush}" BorderThickness="0,1,0,0" Margin="0,8,0,0" />
-
-                <StackPanel Spacing="4">
-                    <TextBlock Style="{StaticResource MdsCaptionStyle}" Text="Preview" />
-                    <Border Background="{ThemeResource MdsSurfaceBrush}"
-                            BorderBrush="{ThemeResource MdsBorderBrush}" BorderThickness="1"
-                            CornerRadius="6" Padding="14,10">
-                        <TextBlock x:Name="PreviewText"
-                                   Text="The quick brown fox jumps over the lazy dog 0123456789"
-                                   TextWrapping="Wrap" />
-                    </Border>
-                </StackPanel>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Right: live source-style preview using Sample.md -->
+        <StackPanel Grid.Column="1" Spacing="6">
+            <TextBlock Style="{StaticResource MdsCaptionStyle}" Text="Preview · Sample.md as source" />
+            <Border Background="{ThemeResource MdsSurfaceBrush}"
+                    BorderBrush="{ThemeResource MdsBorderBrush}" BorderThickness="1"
+                    CornerRadius="6">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto"
+                              Padding="14,12">
+                    <TextBlock x:Name="SamplePreview"
+                               IsTextSelectionEnabled="True"
+                               TextWrapping="NoWrap"
+                               Text="(Sample preview will appear here.)" />
+                </ScrollViewer>
+            </Border>
+        </StackPanel>
     </Grid>
 </UserControl>

@@ -6,10 +6,18 @@ namespace MarkdownStudio.Services;
 
 public sealed class EditorPreferencesService
 {
+    // Editor keys
     private const string FontPresetKey     = "editor.fontPreset.v1";
     private const string FontSizeKey       = "editor.fontSize.v1";
     private const string TabSizeKey        = "editor.tabSize.v1";
     private const string ShowWhitespaceKey = "editor.showWhitespace.v1";
+
+    // Preview keys
+    private const string PreviewFontKey       = "preview.fontPreset.v1";
+    private const string PreviewSizeKey       = "preview.fontSize.v1";
+    private const string PreviewLineHeightKey = "preview.lineHeight.v1";
+    private const string PreviewWidthKey      = "preview.width.v1";
+    private const string PreviewHeadingKey    = "preview.headingStyle.v1";
 
     private readonly EditorPreferences _prefs;
 
@@ -26,12 +34,22 @@ public sealed class EditorPreferencesService
     {
         var values = ApplicationData.Current.LocalSettings.Values;
         var prefs = new EditorPreferences();
+
         if (values[FontPresetKey]     is string id   && !string.IsNullOrEmpty(id)) prefs.FontPresetId   = id;
         if (values[FontSizeKey]       is int    size && size > 0)                  prefs.FontSize       = Clamp(size, 10, 28);
         if (values[TabSizeKey]        is int    tab  && tab  > 0)                  prefs.TabSize        = Clamp(tab,  1, 8);
         if (values[ShowWhitespaceKey] is bool   ws)                                prefs.ShowWhitespace = ws;
+
+        if (values[PreviewFontKey]       is string pfId && !string.IsNullOrEmpty(pfId)) prefs.PreviewFontPresetId = pfId;
+        if (values[PreviewSizeKey]       is int    ps   && ps > 0)                      prefs.PreviewFontSize     = Clamp(ps,  13, 22);
+        if (values[PreviewLineHeightKey] is double plh  && plh > 0)                     prefs.PreviewLineHeight   = ClampD(plh, 1.3, 2.2);
+        if (values[PreviewWidthKey]      is string pwId && !string.IsNullOrEmpty(pwId)) prefs.PreviewWidthId      = pwId;
+        if (values[PreviewHeadingKey]    is string phId && !string.IsNullOrEmpty(phId)) prefs.PreviewHeadingId    = phId;
+
         return prefs;
     }
+
+    // -------- Editor setters --------
 
     public void SetFontPreset(string id)
     {
@@ -67,5 +85,50 @@ public sealed class EditorPreferencesService
         Changed?.Invoke(_prefs);
     }
 
-    private static int Clamp(int v, int lo, int hi) => v < lo ? lo : (v > hi ? hi : v);
+    // -------- Preview setters --------
+
+    public void SetPreviewFontPreset(string id)
+    {
+        if (_prefs.PreviewFontPresetId == id) return;
+        _prefs.PreviewFontPresetId = id;
+        ApplicationData.Current.LocalSettings.Values[PreviewFontKey] = id;
+        Changed?.Invoke(_prefs);
+    }
+
+    public void SetPreviewFontSize(int size)
+    {
+        size = Clamp(size, 13, 22);
+        if (_prefs.PreviewFontSize == size) return;
+        _prefs.PreviewFontSize = size;
+        ApplicationData.Current.LocalSettings.Values[PreviewSizeKey] = size;
+        Changed?.Invoke(_prefs);
+    }
+
+    public void SetPreviewLineHeight(double lh)
+    {
+        lh = ClampD(lh, 1.3, 2.2);
+        if (Math.Abs(_prefs.PreviewLineHeight - lh) < 0.001) return;
+        _prefs.PreviewLineHeight = lh;
+        ApplicationData.Current.LocalSettings.Values[PreviewLineHeightKey] = lh;
+        Changed?.Invoke(_prefs);
+    }
+
+    public void SetPreviewWidth(string id)
+    {
+        if (_prefs.PreviewWidthId == id) return;
+        _prefs.PreviewWidthId = id;
+        ApplicationData.Current.LocalSettings.Values[PreviewWidthKey] = id;
+        Changed?.Invoke(_prefs);
+    }
+
+    public void SetPreviewHeadingStyle(string id)
+    {
+        if (_prefs.PreviewHeadingId == id) return;
+        _prefs.PreviewHeadingId = id;
+        ApplicationData.Current.LocalSettings.Values[PreviewHeadingKey] = id;
+        Changed?.Invoke(_prefs);
+    }
+
+    private static int    Clamp (int    v, int    lo, int    hi) => v < lo ? lo : (v > hi ? hi : v);
+    private static double ClampD(double v, double lo, double hi) => v < lo ? lo : (v > hi ? hi : v);
 }

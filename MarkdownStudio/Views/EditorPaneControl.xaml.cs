@@ -35,6 +35,13 @@ public sealed partial class EditorPaneControl : UserControl
     public int    InitialTabSize       { get; set; } = 2;
     public bool   InitialShowWhitespace { get; set; }
 
+    // Preview-side typography prefs (seeded into the preview page query string).
+    public string InitialPreviewFontFamily { get; set; } = "";
+    public int    InitialPreviewFontSize   { get; set; } = 16;
+    public double InitialPreviewLineHeight { get; set; } = 1.7;
+    public string InitialPreviewWidthCss   { get; set; } = "760px";
+    public string InitialPreviewHeadingClass { get; set; } = "headings-standard";
+
     public event Action<string>? TextChanged;
     public event Action?         FocusToggleRequested;
 
@@ -93,7 +100,19 @@ public sealed partial class EditorPaneControl : UserControl
         if (!string.IsNullOrEmpty(InitialFontFamily))
             editorQueryParts.Add($"family={Uri.EscapeDataString(InitialFontFamily)}");
         var editorQuery  = "?" + string.Join("&", editorQueryParts);
-        var previewQuery = $"?theme={Uri.EscapeDataString(PreviewTheme)}";
+
+        var previewQueryParts = new System.Collections.Generic.List<string>
+        {
+            $"theme={Uri.EscapeDataString(PreviewTheme)}",
+            $"pfSize={InitialPreviewFontSize}",
+            $"pfLh={InitialPreviewLineHeight.ToString(System.Globalization.CultureInfo.InvariantCulture)}",
+            $"pfWidth={Uri.EscapeDataString(InitialPreviewWidthCss)}",
+            $"pfHead={Uri.EscapeDataString(InitialPreviewHeadingClass)}",
+        };
+        if (!string.IsNullOrEmpty(InitialPreviewFontFamily))
+            previewQueryParts.Add($"pfFamily={Uri.EscapeDataString(InitialPreviewFontFamily)}");
+        var previewQuery = "?" + string.Join("&", previewQueryParts);
+
         EditorView.CoreWebView2.Navigate($"https://{VirtualHost}/editor/index.html{editorQuery}");
         PreviewView.CoreWebView2.Navigate($"https://{VirtualHost}/preview/index.html{previewQuery}");
 
@@ -322,6 +341,28 @@ public sealed partial class EditorPaneControl : UserControl
         var family = JsonSerializer.Serialize(fontFamily);
         await EditorView.CoreWebView2.ExecuteScriptAsync(
             $"window.host.setFontOptions({family}, {fontSize}, {tabSize});");
+    }
+
+    public async Task SetPreviewOptionsAsync(
+        string fontFamily, int fontSize, double lineHeight, string widthCss, string headingClass)
+    {
+        InitialPreviewFontFamily   = fontFamily;
+        InitialPreviewFontSize     = fontSize;
+        InitialPreviewLineHeight   = lineHeight;
+        InitialPreviewWidthCss     = widthCss;
+        InitialPreviewHeadingClass = headingClass;
+        if (PreviewView.CoreWebView2 == null || !_previewReady.Task.IsCompleted) return;
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            fontFamily   = fontFamily,
+            fontSize     = fontSize,
+            lineHeight   = lineHeight,
+            width        = widthCss,
+            headingClass = headingClass,
+        });
+        await PreviewView.CoreWebView2.ExecuteScriptAsync(
+            $"window.host.setPreviewOptions({payload});");
     }
 
     public async Task SetRenderWhitespaceAsync(bool show)

@@ -1,22 +1,75 @@
+/* ----- Preview typography (driven by user prefs) -----
+   These CSS variables are read by body / #content below; the host
+   (window.host.setPreviewOptions in preview.js) updates them at runtime
+   from the Settings dialog, and they're seeded from URL query params on
+   load. Falling back to the same Segoe UI / 16px / 1.7 defaults we had. */
+:root {
+  --mds-preview-font-family: "Segoe UI Variable Text", "Segoe UI",
+                             -apple-system, BlinkMacSystemFont,
+                             Helvetica, Arial, sans-serif;
+  --mds-preview-font-size:   16px;
+  --mds-preview-line-height: 1.7;
+  --mds-preview-width:       760px;
+}
+
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
   width: 100%;
-  font-family: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  font-family: var(--mds-preview-font-family);
 }
 
 body.markdown-body {
   padding: 56px 64px 96px 64px;
   box-sizing: border-box;
-  font-size: 16px;
-  line-height: 1.7;
+  font-size:   var(--mds-preview-font-size);
+  line-height: var(--mds-preview-line-height);
 }
 
 #content {
-  max-width: 760px;
+  max-width: var(--mds-preview-width);
   margin: 0 auto;
 }
+
+/* ----- Heading style presets -----
+   Standard is the github-markdown default (border under H1/H2). The other
+   two are class-based overrides on body. */
+body.headings-minimal .markdown-body h1,
+body.headings-minimal .markdown-body h2 {
+  border-bottom: none;
+  padding-bottom: 0;
+  font-weight: 500;
+}
+body.headings-minimal .markdown-body h1 { margin-top: 1.6em; margin-bottom: 0.4em; }
+body.headings-minimal .markdown-body h2 { margin-top: 1.4em; margin-bottom: 0.4em; }
+body.headings-minimal .markdown-body h3,
+body.headings-minimal .markdown-body h4,
+body.headings-minimal .markdown-body h5,
+body.headings-minimal .markdown-body h6 {
+  font-weight: 500;
+}
+
+body.headings-display .markdown-body h1 {
+  font-size: 2.4em;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  margin-top: 1.4em;
+  margin-bottom: 0.6em;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+body.headings-display .markdown-body h2 {
+  font-size: 1.8em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+body.headings-display .markdown-body h3 { font-size: 1.4em; font-weight: 700; margin-top: 1.2em; }
+body.headings-display .markdown-body h4 { font-size: 1.15em; font-weight: 700; }
 
 /* ----- Daylight ----- */
 body.theme-daylight {

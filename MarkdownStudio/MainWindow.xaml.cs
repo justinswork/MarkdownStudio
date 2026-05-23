@@ -28,8 +28,6 @@ public sealed partial class MainWindow : Window
     private readonly FileTreeView _fileTreeView = new();
     private readonly SearchView _searchView = new();
     private readonly OutlineView _outlineView = new();
-    private readonly ThemePickerView _themePickerView = new();
-    private readonly SettingsView _settingsView = new();
 
     private const string DefaultAppPromptKey = "defaultAppPromptShown.v1";
 
@@ -74,6 +72,7 @@ public sealed partial class MainWindow : Window
         // activated with and (on first run) offer to make us the default app.
         RootGrid.Loaded += async (_, _) =>
         {
+            await SeedSampleIfFirstRunAsync();
             foreach (var path in _startupFiles)
             {
                 try { await OpenFileFromPathAsync(path); }
@@ -81,6 +80,46 @@ public sealed partial class MainWindow : Window
             }
             await PromptForDefaultAppAsync();
         };
+    }
+
+    private const string SampleSeededKey = "sampleSeeded.v1";
+
+    // On the user's first launch, copy the bundled docs/Sample.md from the
+    // MSIX install directory into ApplicationData.LocalFolder (which is
+    // writable, unlike the install directory), and add it to the MRU so the
+    // Welcome page shows a friendly starting point. Idempotent across runs.
+    private async Task SeedSampleIfFirstRunAsync()
+    {
+        var values = Windows.Storage.ApplicationData.Current.LocalSettings.Values;
+        if (values[SampleSeededKey] is bool seeded && seeded) return;
+
+        try
+        {
+            var bundled = Path.Combine(AppContext.BaseDirectory, "Samples", "Sample.md");
+            if (!File.Exists(bundled))
+            {
+                values[SampleSeededKey] = true;
+                return;
+            }
+
+            var localFolder = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
+            var dest = Path.Combine(localFolder, "Welcome to Markdown Studio.md");
+            if (!File.Exists(dest))
+            {
+                var contents = await File.ReadAllTextAsync(bundled);
+                await File.WriteAllTextAsync(dest, contents);
+            }
+
+            _mru.Touch(dest, MruKind.File);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Seeding sample failed: {ex.Message}");
+        }
+        finally
+        {
+            values[SampleSeededKey] = true;
+        }
     }
 
     private static EditorMode LoadSavedMode()
@@ -112,17 +151,49 @@ public sealed partial class MainWindow : Window
             if (CurrentPane is { } pane) _ = pane.RevealLineAsync(node.LineNumber);
         };
 
-        _themePickerView.ThemeSelected += t => _appTheme.Select(t);
-        _themePickerView.SetSelected(_appTheme.Selected);
+        _prefs.Changed += p => DispatcherQueue.TryEnqueue(() =>
+        {
+            ApplyFontPrefs(p);
+            ApplyPreviewPrefs(p);
+        });
 
-        _settingsView.Attach(_prefs);
-        _prefs.Changed += p => DispatcherQueue.TryEnqueue(() => ApplyFontPrefs(p));
-
-        ActivityRail.HomeRequested += ShowWelcomeTab;
-        ActivityRail.PaneSelected  += SetSidebarPane;
+        ActivityRail.HomeRequested     += ShowWelcomeTab;
+        ActivityRail.SettingsRequested += () => _ = ShowSettingsDialogAsync();
+        ActivityRail.PaneSelected      += SetSidebarPane;
 
         ModeControl.ModeChanged += OnModeChanged;
     }
+
+    private async Task ShowSettingsDialogAsync()
+    {
+        // ContentDialog hosts in its own popup root which doesn't inherit the
+        // window's RequestedTheme automatically — set it explicitly so the
+        // dialog chrome (title, primary button, frame) matches the app.
+        var dlg = new SettingsDialog
+        {
+            XamlRoot       = RootGrid.XamlRoot,
+            RequestedTheme = _appTheme.EffectiveElementTheme,
+        };
+        // The dialog instantiates fresh panes; attach the services here.
+        dlg.ThemePicker.SetSelected(_appTheme.Selected);
+        dlg.ThemePicker.ThemeSelected += t => _appTheme.Select(t);
+        dlg.EditorSettings.Attach(_prefs);
+        dlg.PreviewSettings.Attach(_prefs);
+        // Settings dialog uses Sample.md content in both tabs' preview area.
+        await dlg.EditorSettings.LoadSampleAsync();
+        await dlg.PreviewSettings.LoadSampleAsync();
+        await dlg.ShowAsync();
+    }
+
+    private static async Task<string> LoadBundledSampleAsync()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Samples", "Sample.md");
+        if (!File.Exists(path)) return string.Empty;
+        try { return await File.ReadAllTextAsync(path); }
+        catch { return string.Empty; }
+    }
+
+    internal static Task<string> GetBundledSampleAsync() => LoadBundledSampleAsync();
 
     // ---- Theme ----
     private void ApplyTheme(AppTheme theme)
@@ -152,7 +223,6 @@ public sealed partial class MainWindow : Window
         ApplyCaptionButtonColors(effective);
 
         ThemeStatusText.Text = theme.DisplayName;
-        _themePickerView.SetSelected(theme);
 
         var monaco  = _appTheme.EffectiveMonacoTheme;
         var preview = _appTheme.EffectivePreviewClass;
@@ -172,6 +242,18 @@ public sealed partial class MainWindow : Window
         {
             _ = pane.SetEditorFontAsync(prefs.Font.CssFamily, prefs.FontSize, prefs.TabSize);
             _ = pane.SetRenderWhitespaceAsync(prefs.ShowWhitespace);
+        }
+    }
+
+    private void ApplyPreviewPrefs(EditorPreferences prefs)
+    {
+        var family = prefs.PreviewFont.CssFamily;
+        var width  = prefs.PreviewWidth.CssMaxWidth;
+        var cls    = prefs.PreviewHeadingStyle.CssClass;
+        foreach (var pane in _panes.Values)
+        {
+            _ = pane.SetPreviewOptionsAsync(family, prefs.PreviewFontSize,
+                                            prefs.PreviewLineHeight, width, cls);
         }
     }
 
@@ -214,8 +296,6 @@ public sealed partial class MainWindow : Window
             ActivityPane.Files    => _fileTreeView,
             ActivityPane.Search   => _searchView,
             ActivityPane.Outline  => _outlineView,
-            ActivityPane.Themes   => _themePickerView,
-            ActivityPane.Settings => _settingsView,
             _                     => null,
         };
 
@@ -250,15 +330,21 @@ public sealed partial class MainWindow : Window
     private TabViewItem AddEditorTab(DocumentTab? doc = null)
     {
         doc ??= new DocumentTab();
+        var p = _prefs.Preferences;
         var pane = new EditorPaneControl
         {
             Document = doc,
             MonacoTheme = _appTheme.EffectiveMonacoTheme,
             PreviewTheme = _appTheme.EffectivePreviewClass,
-            InitialFontFamily     = _prefs.Preferences.Font.CssFamily,
-            InitialFontSize       = _prefs.Preferences.FontSize,
-            InitialTabSize        = _prefs.Preferences.TabSize,
-            InitialShowWhitespace = _prefs.Preferences.ShowWhitespace,
+            InitialFontFamily     = p.Font.CssFamily,
+            InitialFontSize       = p.FontSize,
+            InitialTabSize        = p.TabSize,
+            InitialShowWhitespace = p.ShowWhitespace,
+            InitialPreviewFontFamily   = p.PreviewFont.CssFamily,
+            InitialPreviewFontSize     = p.PreviewFontSize,
+            InitialPreviewLineHeight   = p.PreviewLineHeight,
+            InitialPreviewWidthCss     = p.PreviewWidth.CssMaxWidth,
+            InitialPreviewHeadingClass = p.PreviewHeadingStyle.CssClass,
         };
         // New tab inherits the current view mode (Editor / Split / Preview).
         _ = pane.SetLayoutAsync(ModeToLayout(ModeControl.Mode));

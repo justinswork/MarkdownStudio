@@ -37,5 +37,11 @@
     <Content Include="Web\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- Bundle the welcome sample. The file lives at <repo>/docs/Sample.md;
+         Link puts it at Samples/Sample.md inside the MSIX. MainWindow copies
+         it into LocalAppData on first run and seeds it into the MRU. -->
+    <Content Include="..\docs\Sample.md" Link="Samples\Sample.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="MarkdownStudio.Views.PreviewSettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:MarkdownStudio.Models">
+
+    <Grid ColumnSpacing="24" Padding="20,16,20,16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="22">
+
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource MdsBodyStrongStyle}" Text="Body font" />
+                    <ComboBox x:Name="FontCombo" HorizontalAlignment="Stretch"
+                              ItemsSource="{x:Bind FontList}"
+                              SelectionChanged="OnFontChanged">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:FontPreset">
+                                <TextBlock Text="{x:Bind DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource MdsBodyStrongStyle}" Text="Font size" />
+                        <TextBlock Grid.Column="1" x:Name="FontSizeText"
+                                   Style="{StaticResource MdsCaptionStyle}" VerticalAlignment="Center"
+                                   Text="16 pt" />
+                    </Grid>
+                    <Slider x:Name="FontSizeSlider" Minimum="13" Maximum="22" StepFrequency="1"
+                            TickFrequency="1" TickPlacement="Outside"
+                            ValueChanged="OnFontSizeChanged" />
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource MdsBodyStrongStyle}" Text="Line height" />
+                        <TextBlock Grid.Column="1" x:Name="LineHeightText"
+                                   Style="{StaticResource MdsCaptionStyle}" VerticalAlignment="Center"
+                                   Text="1.7" />
+                    </Grid>
+                    <Slider x:Name="LineHeightSlider" Minimum="1.3" Maximum="2.2" StepFrequency="0.05"
+                            TickFrequency="0.1" TickPlacement="Outside"
+                            ValueChanged="OnLineHeightChanged" />
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource MdsBodyStrongStyle}" Text="Content width" />
+                    <ComboBox x:Name="WidthCombo" HorizontalAlignment="Stretch"
+                              ItemsSource="{x:Bind WidthList}"
+                              SelectionChanged="OnWidthChanged">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:WidthPreset">
+                                <TextBlock Text="{x:Bind DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Style="{StaticResource MdsBodyStrongStyle}" Text="Heading style" />
+                    <ComboBox x:Name="HeadingCombo" HorizontalAlignment="Stretch"
+                              ItemsSource="{x:Bind HeadingList}"
+                              SelectionChanged="OnHeadingChanged">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:HeadingStylePreset">
+                                <StackPanel>
+                                    <TextBlock Text="{x:Bind DisplayName}" />
+                                    <TextBlock Text="{x:Bind Description}"
+                                               Style="{StaticResource MdsCaptionStyle}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Right: live rendered preview using Sample.md content -->
+        <StackPanel Grid.Column="1" Spacing="6">
+            <TextBlock Style="{StaticResource MdsCaptionStyle}" Text="Preview · Sample.md as rendered" />
+            <Border Background="{ThemeResource MdsSurfaceBrush}"
+                    BorderBrush="{ThemeResource MdsBorderBrush}" BorderThickness="1"
+                    CornerRadius="6">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16">
+                    <StackPanel x:Name="PreviewStack" Spacing="0" />
+                </ScrollViewer>
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>

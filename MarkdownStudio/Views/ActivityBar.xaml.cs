@@ -5,11 +5,12 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 
 namespace MarkdownStudio.Views;
 
-public enum ActivityPane { None, Files, Search, Outline, Themes, Settings }
+public enum ActivityPane { None, Files, Search, Outline }
 
 public sealed partial class ActivityBar : UserControl
 {
     public event Action? HomeRequested;
+    public event Action? SettingsRequested;
     public event Action<ActivityPane>? PaneSelected;
 
     private ActivityPane _current = ActivityPane.None;
@@ -34,11 +35,10 @@ public sealed partial class ActivityBar : UserControl
         FilesBtn.IsChecked    = active == ActivityPane.Files;
         SearchBtn.IsChecked   = active == ActivityPane.Search;
         OutlineBtn.IsChecked  = active == ActivityPane.Outline;
-        ThemesBtn.IsChecked   = active == ActivityPane.Themes;
-        SettingsBtn.IsChecked = active == ActivityPane.Settings;
     }
 
     private void OnHomeClicked(object sender, RoutedEventArgs e) => HomeRequested?.Invoke();
+    private void OnSettingsClicked(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke();
 
     private void OnPaneClicked(object sender, RoutedEventArgs e)
     {
@@ -48,8 +48,6 @@ public sealed partial class ActivityBar : UserControl
             "files"    => ActivityPane.Files,
             "search"   => ActivityPane.Search,
             "outline"  => ActivityPane.Outline,
-            "themes"   => ActivityPane.Themes,
-            "settings" => ActivityPane.Settings,
             _          => ActivityPane.None,
         };
 
