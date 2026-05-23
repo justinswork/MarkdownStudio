@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MarkdownStudio.Models;
 using MarkdownStudio.Services;
 using MarkdownStudio.Views;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -34,6 +35,14 @@ public sealed partial class MainWindow : Window
 
     private TabViewItem? _welcomeTab;
     private bool _focusMode;
+
+    // App-close prompt orchestration. _promptingClose: we're mid-loop, ignore
+    // duplicate close clicks. _acceptingClose: prompts all resolved, the next
+    // Closing event should let the window go through.
+    private bool _promptingClose = false;
+    private bool _acceptingClose = false;
+
+    private enum SavePromptResult { Save, Discard, Cancel }
     private readonly IReadOnlyList<string> _startupFiles;
 
     public MainWindow() : this(null) { }
@@ -45,6 +54,10 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+
+        // Catch app close (X / Alt+F4 / Exit menu) so we can prompt for dirty tabs.
+        try { AppWindow.Closing += OnAppWindowClosing; }
+        catch { /* not available in some hosting modes */ }
 
         WireUpViews();
 
@@ -385,9 +398,9 @@ public sealed partial class MainWindow : Window
     private async void OnSave(object sender, RoutedEventArgs e)       => await SaveCurrentAsync(saveAs: false);
     private async void OnSaveAs(object sender, RoutedEventArgs e)     => await SaveCurrentAsync(saveAs: true);
     private void OnShowWelcome(object sender, RoutedEventArgs e)      => ShowWelcomeTab();
-    private void OnCloseTab(object sender, RoutedEventArgs e)
+    private async void OnCloseTab(object sender, RoutedEventArgs e)
     {
-        if (Tabs.SelectedItem is TabViewItem item) CloseTab(item);
+        if (Tabs.SelectedItem is TabViewItem item) await TryCloseTabAsync(item);
     }
     private void OnExit(object sender, RoutedEventArgs e) => Close();
 
@@ -445,15 +458,22 @@ public sealed partial class MainWindow : Window
     private async void OnSaveAsAccel(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs a)
     { a.Handled = true; await SaveCurrentAsync(true); }
 
-    private void OnCloseTabAccel(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs a)
-    { a.Handled = true; if (Tabs.SelectedItem is TabViewItem item) CloseTab(item); }
+    private async void OnCloseTabAccel(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs a)
+    { a.Handled = true; if (Tabs.SelectedItem is TabViewItem item) await TryCloseTabAsync(item); }
 
     private async Task SaveCurrentAsync(bool saveAs)
     {
         var pane = CurrentPane;
         var doc = pane?.Document;
         if (pane == null || doc == null) return;
+        await SaveDocumentAsync(doc, pane, saveAs);
+    }
 
+    // Returns false if the save was aborted (e.g., the user cancelled the
+    // file picker). Used by the close-prompt flow to decide whether to
+    // continue the close or back out.
+    private async Task<bool> SaveDocumentAsync(DocumentTab doc, EditorPaneControl pane, bool saveAs)
+    {
         var text = await pane.GetContentAsync();
         doc.Content = text;
 
@@ -461,14 +481,20 @@ public sealed partial class MainWindow : Window
         if (string.IsNullOrEmpty(path) || saveAs)
         {
             path = await FileService.PickSavePathAsync(this, doc.DisplayName);
-            if (string.IsNullOrEmpty(path)) return;
+            if (string.IsNullOrEmpty(path)) return false;
             doc.FilePath = path;
         }
 
-        await FileService.SaveAsync(path, text);
+        try { await FileService.SaveAsync(path, text); }
+        catch (Exception ex)
+        {
+            await ShowMessageAsync("Couldn't save", ex.Message);
+            return false;
+        }
         doc.IsDirty = false;
         _mru.Touch(path, MruKind.File);
         StatusText.Text = $"Saved {Path.GetFileName(path)}";
+        return true;
     }
 
     private async void OnAbout(object sender, RoutedEventArgs e) =>
@@ -518,16 +544,100 @@ public sealed partial class MainWindow : Window
     }
 
     // ---- Tab events ----
-    private void Tabs_TabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args) =>
-        CloseTab(args.Tab);
+    private async void Tabs_TabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args) =>
+        await TryCloseTabAsync(args.Tab);
 
-    private void CloseTab(TabViewItem item)
+    // Returns false if the user cancelled the close (used by app-close to
+    // abort the whole shutdown). Welcome tabs close without prompting.
+    private async Task<bool> TryCloseTabAsync(TabViewItem item)
     {
-        if (item == _welcomeTab) _welcomeTab = null;
-        else _panes.Remove(item);
+        if (item == _welcomeTab)
+        {
+            _welcomeTab = null;
+            Tabs.TabItems.Remove(item);
+            if (Tabs.TabItems.Count == 0) ShowWelcomeTab();
+            return true;
+        }
 
+        if (_panes.TryGetValue(item, out var pane) && pane.Document is { } doc && doc.IsDirty)
+        {
+            // Sync Document.Content with whatever's currently in the editor —
+            // the change-message is debounced, so the last few keystrokes may
+            // not have been flushed yet.
+            try { doc.Content = await pane.GetContentAsync(); }
+            catch { /* fall back to whatever we have */ }
+
+            Tabs.SelectedItem = item;
+            var result = await PromptSaveAsync(doc);
+            if (result == SavePromptResult.Cancel) return false;
+            if (result == SavePromptResult.Save)
+            {
+                if (!await SaveDocumentAsync(doc, pane, saveAs: false)) return false;
+            }
+        }
+
+        _panes.Remove(item);
         Tabs.TabItems.Remove(item);
         if (Tabs.TabItems.Count == 0) ShowWelcomeTab();
+        return true;
+    }
+
+    private async Task<SavePromptResult> PromptSaveAsync(DocumentTab doc)
+    {
+        var name = string.IsNullOrEmpty(doc.DisplayName) ? "Untitled" : doc.DisplayName;
+        var dialog = new ContentDialog
+        {
+            Title = "Save changes?",
+            Content = $"\"{name}\" has unsaved changes. Save before closing?",
+            PrimaryButtonText   = "Save",
+            SecondaryButtonText = "Don't save",
+            CloseButtonText     = "Cancel",
+            DefaultButton       = ContentDialogButton.Primary,
+            XamlRoot            = RootGrid.XamlRoot,
+        };
+        ContentDialogResult res;
+        try { res = await dialog.ShowAsync(); }
+        catch { return SavePromptResult.Cancel; }
+        return res switch
+        {
+            ContentDialogResult.Primary   => SavePromptResult.Save,
+            ContentDialogResult.Secondary => SavePromptResult.Discard,
+            _                             => SavePromptResult.Cancel,
+        };
+    }
+
+    private async void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
+    {
+        // We already approved this close (re-entry from our own Close() call).
+        if (_acceptingClose) return;
+        // A prompt loop is already in flight. Just cancel the duplicate.
+        if (_promptingClose) { args.Cancel = true; return; }
+
+        // Walk dirty tabs in tab order so the user sees them left-to-right.
+        var dirty = new List<TabViewItem>();
+        foreach (var obj in Tabs.TabItems)
+        {
+            if (obj is TabViewItem t && _panes.TryGetValue(t, out var p)
+                && p.Document?.IsDirty == true)
+                dirty.Add(t);
+        }
+        if (dirty.Count == 0) return; // nothing to prompt — let the window close
+
+        args.Cancel = true;          // hold the window open while we prompt
+        _promptingClose = true;
+        try
+        {
+            foreach (var tab in dirty)
+            {
+                if (!await TryCloseTabAsync(tab)) return; // user cancelled — abort shutdown
+            }
+            _acceptingClose = true;
+            Close();
+        }
+        finally
+        {
+            _promptingClose = false;
+        }
     }
 
     private void Tabs_AddTabButtonClick(TabView sender, object args) => CreateBlankTab();
