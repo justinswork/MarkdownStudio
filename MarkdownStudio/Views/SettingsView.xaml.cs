@@ -65,7 +65,11 @@ public sealed partial class SettingsView : UserControl
         var webRoot = Path.Combine(AppContext.BaseDirectory, "Web");
         EditorWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
             VirtualHost, webRoot, CoreWebView2HostResourceAccessKind.Allow);
+#if DEBUG
+        EditorWebView.CoreWebView2.Settings.AreDevToolsEnabled = true;
+#else
         EditorWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+#endif
         EditorWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
         EditorWebView.WebMessageReceived += OnWebMessage;
 
