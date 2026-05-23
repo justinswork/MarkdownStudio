@@ -140,14 +140,15 @@ body.theme-solarized-dark .markdown-body h2         { border-bottom-color: #1454
 }
 
 /* ----- X-ray editor ----- */
+/* The textarea inherits the preview body font/size/line-height (set below)
+   so soft-wrap points line up with how the same text renders in the
+   preview. The container itself stays neutral. */
 .mds-xray {
   margin: 8px 0;
   border: 1px solid rgba(78, 161, 255, 0.45);
   background: rgba(78, 161, 255, 0.06);
   border-radius: 6px;
   overflow: hidden;
-  font-family: "Cascadia Code", Consolas, "Courier New", monospace;
-  font-size: 13px;
   box-shadow: 0 0 0 3px rgba(78, 161, 255, 0.08);
 }
 .mds-xray-toolbar {
@@ -177,18 +178,28 @@ body.theme-solarized-dark .markdown-body h2         { border-bottom-color: #1454
   display: block;
   width: 100%;
   min-height: 40px;
-  padding: 12px 14px;
+  /* Match the preview body's padding rhythm so soft-wrap occurs at roughly
+     the same column it does in the rendered preview. */
+  padding: 12px 0;
   border: none;
   resize: none;
   outline: none;
   background: transparent;
   color: inherit;
-  font: inherit;
-  line-height: 1.55;
+  /* Inherit the preview body typography (set on body.markdown-body) so a
+     long source line wraps to the same number of visual lines you'd see
+     rendered just above. */
+  font-family: "Segoe UI Variable Text", "Segoe UI",
+               -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
   box-sizing: border-box;
-  white-space: pre;
-  overflow-x: auto;
-  tab-size: 4;
+  /* Soft-wrap. Preserves newlines and runs of whitespace, breaks long
+     words so URLs / inline code don't push the layout. */
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  overflow-x: hidden;
 }
 .mds-xray-saving { opacity: 0.6; pointer-events: none; }
 

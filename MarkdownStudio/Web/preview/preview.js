@@ -416,7 +416,7 @@
         '<button class="mds-xray-cancel" type="button">Cancel</button>' +
         '<span class="mds-xray-hint">Ctrl+Enter save · Esc cancel</span>' +
       '</div>' +
-      '<textarea class="mds-xray-text" spellcheck="false" wrap="off"></textarea>';
+      '<textarea class="mds-xray-text" spellcheck="false" wrap="soft"></textarea>';
 
     anchor.insertAdjacentElement('beforebegin', wrap);
     for (var i = 0; i < blocks.length; i++) blocks[i].style.display = 'none';
