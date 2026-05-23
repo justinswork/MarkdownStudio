@@ -1,6 +1,10 @@
 # Markdown Studio
 
-Stop ping-ponging between source and preview. Markdown Studio is a native Windows markdown editor that lets you **right-click any rendered block — a paragraph, heading, list, code block — and edit its raw markdown right there in place**.
+A premium native Windows markdown editor with the editing chops of a full code editor on one side, a live preview on the other, and a few opinionated features designed to make working with markdown feel direct rather than fiddly.
+
+It's also a great markdown **reader**. Open any folder — a documentation site, a repo full of READMEs, your library of AI prompt files — and the sidebar filters down to just the `.md` files. No source code, lockfiles, or build artifacts crowding the view; just the docs you actually came to read.
+
+The headline feature is **X-ray edit**: a way to peek through the rendered preview and edit any block's raw markdown right where it sits.
 
 ---
 
