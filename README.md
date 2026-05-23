@@ -8,7 +8,7 @@ The headline feature is **X-ray edit**: a way to peek through the rendered previ
 
 ## ⌧ X-ray edit
 
-![X-ray edit in action](docs/xray.png)
+![X-ray edit in action](docs/MarkdownXRay.gif)
 
 You're reading the rendered preview. You spot a typo, or want to bold a word, or fix a link. Most editors send you back to the source pane to find that line and edit it there.
 
