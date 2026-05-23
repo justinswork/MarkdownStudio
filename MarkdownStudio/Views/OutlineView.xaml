@@ -11,10 +11,22 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Padding="16,14,16,8" Spacing="2">
-            <TextBlock Style="{StaticResource MdsSidebarTitleStyle}" Text="Outline" />
-            <TextBlock x:Name="SubtitleText" Style="{StaticResource MdsCaptionStyle}" Text="No headings yet" />
-        </StackPanel>
+        <Grid Grid.Row="0" Padding="16,14,12,8" ColumnSpacing="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Spacing="2">
+                <TextBlock Style="{StaticResource MdsSidebarTitleStyle}" Text="Outline" />
+                <TextBlock x:Name="SubtitleText" Style="{StaticResource MdsCaptionStyle}" Text="No headings yet" />
+            </StackPanel>
+            <Button Grid.Column="1" x:Name="ToggleAllButton" Click="OnToggleAll"
+                    Style="{StaticResource MdsGhostButtonStyle}"
+                    Visibility="Collapsed"
+                    ToolTipService.ToolTip="Collapse all">
+                <FontIcon x:Name="ToggleAllIcon" Glyph="&#xE70E;" FontSize="12" />
+            </Button>
+        </Grid>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <TreeView x:Name="Tree" SelectionMode="Single"
@@ -23,7 +35,8 @@
                       ItemContainerStyle="{StaticResource MdsTreeViewItemStyle}">
                 <TreeView.ItemTemplate>
                     <DataTemplate x:DataType="models:OutlineNode">
-                        <TreeViewItem ItemsSource="{x:Bind Children}">
+                        <TreeViewItem ItemsSource="{x:Bind Children}"
+                                      IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}">
                             <TextBlock Text="{x:Bind Title}" Style="{StaticResource MdsBodyStyle}"
                                        TextTrimming="CharacterEllipsis"
                                        Tag="{x:Bind}" Tapped="OnTitleTapped" />
