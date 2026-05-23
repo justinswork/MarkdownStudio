@@ -26,6 +26,15 @@ public sealed partial class PreviewSettingsView : UserControl
     private bool _webViewInitialized;
     private readonly TaskCompletionSource<bool> _previewReady = new();
     private string _sampleText = "";
+    private string _initialPreviewTheme = "theme-daylight";
+
+    // Set by the host before showing so the embedded preview picks up the
+    // user's actual app theme rather than the system theme.
+    public string InitialPreviewTheme
+    {
+        get => _initialPreviewTheme;
+        set => _initialPreviewTheme = string.IsNullOrEmpty(value) ? "theme-daylight" : value;
+    }
 
     public PreviewSettingsView()
     {
@@ -70,12 +79,9 @@ public sealed partial class PreviewSettingsView : UserControl
         PreviewWebView.WebMessageReceived += OnWebMessage;
 
         var prefs = _service?.Preferences ?? new EditorPreferences();
-        var themeClass = (Application.Current?.RequestedTheme ?? ApplicationTheme.Light) == ApplicationTheme.Dark
-            ? "theme-midnight" : "theme-daylight";
-
         var qs = new List<string>
         {
-            $"theme={Uri.EscapeDataString(themeClass)}",
+            $"theme={Uri.EscapeDataString(_initialPreviewTheme)}",
             $"pfSize={prefs.PreviewFontSize}",
             $"pfLh={prefs.PreviewLineHeight.ToString(CultureInfo.InvariantCulture)}",
             $"pfWidth={Uri.EscapeDataString(prefs.PreviewWidth.CssMaxWidth)}",
@@ -141,6 +147,16 @@ public sealed partial class PreviewSettingsView : UserControl
         });
         await PreviewWebView.CoreWebView2.ExecuteScriptAsync(
             $"window.host.setPreviewOptions({payload});");
+    }
+
+    // Called by SettingsDialog when the user picks a different app theme so
+    // the embedded preview re-skins live.
+    public async Task SetThemeAsync(string previewClassName)
+    {
+        _initialPreviewTheme = previewClassName;
+        if (PreviewWebView.CoreWebView2 == null || !_previewReady.Task.IsCompleted) return;
+        var encoded = JsonSerializer.Serialize(previewClassName);
+        await PreviewWebView.CoreWebView2.ExecuteScriptAsync($"window.host.setTheme({encoded});");
     }
 
     private static void SelectByIdInto<T>(

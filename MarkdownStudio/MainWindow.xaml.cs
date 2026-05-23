@@ -168,12 +168,21 @@ public sealed partial class MainWindow : Window
     {
         // ContentDialog hosts in its own popup root which doesn't inherit the
         // window's RequestedTheme automatically — set it explicitly so the
-        // dialog chrome (title, primary button, frame) matches the app.
+        // dialog chrome (title, primary button, frame) matches the app. We
+        // also subscribe the dialog to AppThemeService so it re-skins live
+        // when the user picks a different theme from the General tab.
         var dlg = new SettingsDialog
         {
             XamlRoot       = RootGrid.XamlRoot,
             RequestedTheme = _appTheme.EffectiveElementTheme,
         };
+        dlg.AttachThemeService(_appTheme);
+
+        // Seed the dialog's embedded WebView2s with the current app theme
+        // (not the system theme) before they navigate.
+        dlg.EditorSettings.InitialMonacoTheme   = _appTheme.EffectiveMonacoTheme;
+        dlg.PreviewSettings.InitialPreviewTheme = _appTheme.EffectivePreviewClass;
+
         // The dialog instantiates fresh panes; attach the services here.
         dlg.ThemePicker.SetSelected(_appTheme.Selected);
         dlg.ThemePicker.ThemeSelected += t => _appTheme.Select(t);

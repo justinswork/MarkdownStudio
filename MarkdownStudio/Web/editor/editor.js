@@ -37,6 +37,8 @@
         'editor.lineHighlightBackground': '#F0F0F2',
         'editor.selectionBackground': '#CCE4FF',
         'editorCursor.foreground': '#007ACC',
+        'editorWhitespace.foreground': '#A0A4AB',
+        'editorIndentGuide.background': '#E4E4E8',
       },
     });
     monaco.editor.defineTheme('ms-midnight', {
@@ -49,6 +51,8 @@
         'editor.lineHighlightBackground': '#1E212B',
         'editor.selectionBackground': '#264F78',
         'editorCursor.foreground': '#569CD6',
+        'editorWhitespace.foreground': '#7A7F8B',
+        'editorIndentGuide.background': '#2D303A',
       },
     });
     monaco.editor.defineTheme('ms-sepia', {
@@ -62,6 +66,8 @@
         'editor.lineHighlightBackground': '#F2EAD2',
         'editor.selectionBackground': '#E8D8B0',
         'editorCursor.foreground': '#A56623',
+        'editorWhitespace.foreground': '#A88E68',
+        'editorIndentGuide.background': '#DACFB8',
       },
     });
     monaco.editor.defineTheme('ms-solarized-light', {
@@ -74,6 +80,8 @@
         'editor.lineHighlightBackground': '#EEE8D5',
         'editor.selectionBackground': '#D8D1B0',
         'editorCursor.foreground': '#268BD2',
+        'editorWhitespace.foreground': '#7A8C8C',
+        'editorIndentGuide.background': '#D5CFBC',
       },
     });
     monaco.editor.defineTheme('ms-solarized-dark', {
@@ -86,6 +94,8 @@
         'editor.lineHighlightBackground': '#073642',
         'editor.selectionBackground': '#14546A',
         'editorCursor.foreground': '#268BD2',
+        'editorWhitespace.foreground': '#7A8B8B',
+        'editorIndentGuide.background': '#14546A',
       },
     });
 

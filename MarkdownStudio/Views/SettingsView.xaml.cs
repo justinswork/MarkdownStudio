@@ -23,6 +23,15 @@ public sealed partial class SettingsView : UserControl
     private bool _webViewInitialized;
     private readonly TaskCompletionSource<bool> _editorReady = new();
     private string _sampleText = "";
+    private string _initialMonacoTheme = "ms-daylight";
+
+    // Set by the host (MainWindow) before the dialog is shown so the embedded
+    // Monaco picks up the user's actual app theme (not the system theme).
+    public string InitialMonacoTheme
+    {
+        get => _initialMonacoTheme;
+        set => _initialMonacoTheme = string.IsNullOrEmpty(value) ? "ms-daylight" : value;
+    }
 
     public SettingsView()
     {
@@ -74,12 +83,9 @@ public sealed partial class SettingsView : UserControl
         EditorWebView.WebMessageReceived += OnWebMessage;
 
         var prefs = _service?.Preferences ?? new EditorPreferences();
-        var theme = (Application.Current?.RequestedTheme ?? ApplicationTheme.Light) == ApplicationTheme.Dark
-            ? "ms-midnight" : "ms-daylight";
-
         var qs = new List<string>
         {
-            $"theme={Uri.EscapeDataString(theme)}",
+            $"theme={Uri.EscapeDataString(_initialMonacoTheme)}",
             $"size={prefs.FontSize}",
             $"tab={prefs.TabSize}",
             $"ws={(prefs.ShowWhitespace ? 1 : 0)}",
@@ -146,6 +152,16 @@ public sealed partial class SettingsView : UserControl
             $"window.host.setFontOptions({family}, {prefs.FontSize}, {prefs.TabSize});");
         await EditorWebView.CoreWebView2.ExecuteScriptAsync(
             $"window.host.setRenderWhitespace({(prefs.ShowWhitespace ? "true" : "false")});");
+    }
+
+    // Called by SettingsDialog when the user picks a different app theme in
+    // the General tab so the embedded Monaco re-skins live.
+    public async Task SetThemeAsync(string monacoThemeName)
+    {
+        _initialMonacoTheme = monacoThemeName;
+        if (EditorWebView.CoreWebView2 == null || !_editorReady.Task.IsCompleted) return;
+        var encoded = JsonSerializer.Serialize(monacoThemeName);
+        await EditorWebView.CoreWebView2.ExecuteScriptAsync($"window.host.setTheme({encoded});");
     }
 
     private void OnFontChanged(object sender, SelectionChangedEventArgs e)
