@@ -38,7 +38,7 @@ public sealed partial class SettingsView : UserControl
         _sampleText = await MainWindow.GetBundledSampleAsync();
         if (string.IsNullOrEmpty(_sampleText))
             _sampleText = "(Sample.md not found in the install location.)";
-        SamplePreview.Text = _sampleText;
+        UpdateSampleText();
     }
 
     private void ApplyPreferencesToUi(EditorPreferences prefs)
@@ -62,14 +62,50 @@ public sealed partial class SettingsView : UserControl
             WhitespaceToggle.IsOn = prefs.ShowWhitespace;
 
             UpdatePreviewFont(prefs);
+            UpdateSampleText();
         }
         finally { _suppressEvents = false; }
     }
 
     private void UpdatePreviewFont(EditorPreferences prefs)
     {
-        SamplePreview.FontFamily = new FontFamily(prefs.Font.CssFamily);
+        // CssFamily uses CSS syntax (single quotes, "monospace" keyword) which
+        // XAML's FontFamily parser doesn't understand — strip those bits so
+        // each preset actually applies in the dialog preview.
+        SamplePreview.FontFamily = new FontFamily(CssFontFamilyToXaml(prefs.Font.CssFamily));
         SamplePreview.FontSize   = prefs.FontSize;
+    }
+
+    internal static string CssFontFamilyToXaml(string css)
+    {
+        if (string.IsNullOrWhiteSpace(css)) return "Consolas";
+        var parts = css.Split(',');
+        var keep  = new List<string>(parts.Length);
+        foreach (var p in parts)
+        {
+            var name = p.Trim().Trim('\'', '"').Trim();
+            if (string.IsNullOrEmpty(name)) continue;
+            // Drop CSS generic keywords that XAML doesn't recognise.
+            if (string.Equals(name, "monospace",  StringComparison.OrdinalIgnoreCase)) continue;
+            if (string.Equals(name, "serif",      StringComparison.OrdinalIgnoreCase)) continue;
+            if (string.Equals(name, "sans-serif", StringComparison.OrdinalIgnoreCase)) continue;
+            if (string.Equals(name, "system-ui",  StringComparison.OrdinalIgnoreCase)) continue;
+            keep.Add(name);
+        }
+        return keep.Count == 0 ? "Consolas" : string.Join(", ", keep);
+    }
+
+    // TextBlock has no native "show whitespace" mode, but to make the toggle
+    // do something visible in this preview we substitute middle-dots for
+    // spaces and arrows for tabs when the setting is on. The actual Monaco
+    // editor uses renderWhitespace which is a separate code path.
+    private void UpdateSampleText()
+    {
+        if (string.IsNullOrEmpty(_sampleText)) return;
+        var showWs = _service?.Preferences.ShowWhitespace ?? false;
+        SamplePreview.Text = showWs
+            ? _sampleText.Replace("\t", "→   ").Replace(" ", "·")
+            : _sampleText;
     }
 
     private void OnFontChanged(object sender, SelectionChangedEventArgs e)

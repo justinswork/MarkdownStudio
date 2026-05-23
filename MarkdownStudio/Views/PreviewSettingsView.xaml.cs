@@ -178,7 +178,10 @@ public sealed partial class PreviewSettingsView : UserControl
         if (_sampleBlocks.Count == 0) return;
         if (PreviewStack.Children.Count == 0) RebuildPreviewStack();
 
-        var family = new FontFamily(prefs.PreviewFont.CssFamily);
+        // CssFamily uses CSS syntax (single quotes, generic keywords like
+        // "sans-serif") that XAML's FontFamily parser doesn't accept; strip
+        // those before handing it to a new FontFamily.
+        var family = new FontFamily(SettingsView.CssFontFamilyToXaml(prefs.PreviewFont.CssFamily));
         var baseSize   = prefs.PreviewFontSize;
         var lineHeight = baseSize * prefs.PreviewLineHeight;
 
