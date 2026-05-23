@@ -1,8 +1,6 @@
 # Markdown Studio
 
-A premium native Windows markdown editor — built with **WinUI 3** and **.NET 10**, with a Monaco editor on one side, a live preview on the other, and a few opinionated features designed to make working with markdown feel direct rather than fiddly.
-
-The headline feature is **X-ray edit**: a way to peek through the rendered preview and edit any block's raw markdown right where it sits.
+Stop ping-ponging between source and preview. Markdown Studio is a native Windows markdown editor that lets you **right-click any rendered block — a paragraph, heading, list, code block — and edit its raw markdown right there in place**.
 
 ---
 
