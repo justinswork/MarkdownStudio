@@ -379,9 +379,17 @@
     xrayMenu.className = 'mds-context-menu';
     xrayMenu.innerHTML =
       '<button class="mds-cm-item" data-action="xray" type="button">' +
-        '<span class="mds-cm-icon">⌧</span>' +
         '<span class="mds-cm-label">X-ray edit</span>' +
         '<kbd class="mds-cm-kbd">Ctrl+E</kbd>' +
+      '</button>' +
+      '<div class="mds-cm-separator"></div>' +
+      '<button class="mds-cm-item" data-action="copy" type="button">' +
+        '<span class="mds-cm-label">Copy</span>' +
+        '<kbd class="mds-cm-kbd">Ctrl+C</kbd>' +
+      '</button>' +
+      '<button class="mds-cm-item" data-action="selectAll" type="button">' +
+        '<span class="mds-cm-label">Select all</span>' +
+        '<kbd class="mds-cm-kbd">Ctrl+A</kbd>' +
       '</button>';
     document.body.appendChild(xrayMenu);
     // Swallow mousedown / pointerdown so the outside-click dismissal doesn't
@@ -392,27 +400,67 @@
     });
     xrayMenu.addEventListener('click', function (e) {
       var btn = e.target.closest('[data-action]');
-      if (!btn) return;
+      if (!btn || btn.classList.contains('disabled')) return;
       // Capture state BEFORE hiding (hideXrayMenu clears it).
       var blocks = xrayContextBlocks;
       var click  = xrayContextClick;
+      var action = btn.getAttribute('data-action');
       hideXrayMenu();
-      if (btn.getAttribute('data-action') === 'xray' && blocks && blocks.length) {
+      if (action === 'xray' && blocks && blocks.length) {
         startXrayEdit(blocks, click);
+      } else if (action === 'copy') {
+        copySelectionToClipboard();
+      } else if (action === 'selectAll') {
+        selectAllPreview();
       }
     });
     return xrayMenu;
+  }
+
+  function copySelectionToClipboard() {
+    var sel = window.getSelection();
+    var text = sel ? sel.toString() : '';
+    if (!text) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(function () {
+          try { document.execCommand('copy'); } catch (_) {}
+        });
+      } else {
+        document.execCommand('copy');
+      }
+    } catch (_) {}
+  }
+
+  function selectAllPreview() {
+    var article = document.getElementById('content');
+    if (!article) return;
+    var range = document.createRange();
+    range.selectNodeContents(article);
+    var sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    sel.addRange(range);
   }
 
   function showXrayMenu(x, y, blocks) {
     xrayContextBlocks = blocks;
     xrayContextClick  = { x: x, y: y };
     var menu = ensureXrayMenu();
-    // Reflect a count for selections >1 by tweaking the label.
-    var label = menu.querySelector('.mds-cm-label');
-    if (label) label.textContent = blocks.length > 1
+    // Reflect a count for selections >1 in the x-ray label. Disable X-ray
+    // entirely when there are no blocks under the cursor.
+    var xrayItem = menu.querySelector('[data-action="xray"]');
+    var xrayLbl  = xrayItem ? xrayItem.querySelector('.mds-cm-label') : null;
+    if (xrayItem) xrayItem.classList.toggle('disabled', !blocks || !blocks.length);
+    if (xrayLbl) xrayLbl.textContent = (blocks && blocks.length > 1)
       ? 'X-ray edit (' + blocks.length + ' blocks)'
       : 'X-ray edit';
+    // Copy only makes sense with a non-empty selection.
+    var copyBtn = menu.querySelector('[data-action="copy"]');
+    if (copyBtn) {
+      var hasSel = !!(window.getSelection() && window.getSelection().toString().length);
+      copyBtn.classList.toggle('disabled', !hasSel);
+    }
     menu.style.left = '0px';
     menu.style.top  = '0px';
     menu.classList.add('visible');
@@ -436,9 +484,11 @@
       var block = findBlock(e.target);
       if (block) blocks = [block];
     }
-    if (!blocks || !blocks.length) return;
+    // Even when there's no block under the cursor (e.g. margin / blank
+    // bottom space) we still show the menu so Copy / Select all are
+    // reachable; X-ray will be disabled in that state.
     e.preventDefault();
-    showXrayMenu(e.clientX, e.clientY, blocks);
+    showXrayMenu(e.clientX, e.clientY, blocks || []);
   });
   document.addEventListener('mousedown', function (e) {
     if (!xrayMenu || !xrayMenu.classList.contains('visible')) return;
@@ -497,9 +547,9 @@
     wrap.innerHTML =
       '<div class="mds-xray-toolbar">' +
         '<span class="mds-xray-label">' + rangeLbl + '</span>' +
-        '<button class="mds-xray-save"   type="button">Save</button>' +
+        '<button class="mds-xray-apply"  type="button">Apply</button>' +
         '<button class="mds-xray-cancel" type="button">Cancel</button>' +
-        '<span class="mds-xray-hint">Ctrl+Enter save · Esc cancel</span>' +
+        '<span class="mds-xray-hint">Ctrl+Enter apply · Esc cancel</span>' +
       '</div>' +
       '<textarea class="mds-xray-text" spellcheck="false" wrap="soft"></textarea>';
 
@@ -517,10 +567,10 @@
     textarea.addEventListener('input', autoResize);
     textarea.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { e.preventDefault(); cancelXrayEditor(); }
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveXrayEditor(); }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); applyXrayEditor(); }
     });
 
-    wrap.querySelector('.mds-xray-save'  ).addEventListener('click', saveXrayEditor);
+    wrap.querySelector('.mds-xray-apply' ).addEventListener('click', applyXrayEditor);
     wrap.querySelector('.mds-xray-cancel').addEventListener('click', cancelXrayEditor);
 
     xrayState = {
@@ -543,13 +593,15 @@
     }, 0);
   }
 
-  function saveXrayEditor() {
+  function applyXrayEditor() {
     if (!xrayActive || !xrayState) return;
     var text = xrayState.wrap.querySelector('.mds-xray-text').value;
     // Convert the markdown-it style range (0-based inclusive start, 0-based
     // exclusive end) to Monaco's 1-based inclusive convention.
     var monacoStart = xrayState.startLine + 1;
     var monacoEnd   = xrayState.endLine;
+    // The message type stays "xrayApply" — that's the wire-level contract
+    // with the host; the renamed JS function and UI labels are local.
     postToHost({
       type: 'xrayApply',
       startLine: monacoStart,
@@ -557,9 +609,10 @@
       text:      text,
     });
     // Mark inactive so the upcoming render() (triggered by Monaco's change
-    // event) can rebuild the DOM and our wrap disappears cleanly.
+    // event) can rebuild the DOM and our wrap disappears cleanly. The buffer
+    // is updated in-memory only; the user still has to Ctrl+S to save to disk.
     xrayActive = false;
-    if (xrayState.wrap) xrayState.wrap.classList.add('mds-xray-saving');
+    if (xrayState.wrap) xrayState.wrap.classList.add('mds-xray-applying');
     xrayState = null;
   }
 
