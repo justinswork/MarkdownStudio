@@ -9,6 +9,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Padding="16,14,16,8" Spacing="2">
@@ -63,5 +64,33 @@
                 </ListView.ItemTemplate>
             </ListView>
         </ScrollViewer>
+
+        <!-- File associations: opens Windows' Default Apps page so the user
+             can opt in to Markdown Studio handling .md / .markdown / etc.
+             We can't actually flip the registration ourselves from a sandboxed
+             MSIX app — Windows owns that choice — so this is just a shortcut. -->
+        <Border Grid.Row="2" Margin="16,4,16,16" Padding="14,12"
+                CornerRadius="8"
+                Background="{ThemeResource MdsSurfaceBrush}"
+                BorderBrush="{ThemeResource MdsBorderBrush}"
+                BorderThickness="1">
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource MdsBodyStrongStyle}"
+                               Text="File associations" />
+                    <TextBlock Style="{StaticResource MdsCaptionStyle}"
+                               TextWrapping="Wrap"
+                               Text="Make Markdown Studio the default app for .md and other Markdown files. Opens Windows Settings → Default apps." />
+                </StackPanel>
+                <Button Grid.Column="1" Click="OnOpenDefaultApps"
+                        Style="{StaticResource MdsAccentButtonStyle}"
+                        VerticalAlignment="Center"
+                        Content="Set as default…" />
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

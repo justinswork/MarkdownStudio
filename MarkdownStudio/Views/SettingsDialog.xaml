@@ -93,6 +93,12 @@
                     </muxc:TabViewItem.IconSource>
                     <views:PreviewSettingsView x:Name="PreviewPane" />
                 </muxc:TabViewItem>
+                <muxc:TabViewItem Header="Shortcuts" IsClosable="False">
+                    <muxc:TabViewItem.IconSource>
+                        <muxc:FontIconSource Glyph="&#xE765;" />
+                    </muxc:TabViewItem.IconSource>
+                    <views:KeyboardShortcutsView x:Name="ShortcutsPane" />
+                </muxc:TabViewItem>
             </muxc:TabView.TabItems>
         </muxc:TabView>
     </Grid>

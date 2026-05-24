@@ -24,7 +24,11 @@
                     Style="{StaticResource MdsGhostButtonStyle}"
                     Visibility="Collapsed"
                     ToolTipService.ToolTip="Collapse all">
-                <FontIcon x:Name="ToggleAllIcon" Glyph="&#xE70E;" FontSize="12" />
+                <!-- Two chevrons stacked tight to read as "double chevron — applies to all". -->
+                <StackPanel Spacing="-4">
+                    <FontIcon x:Name="ToggleAllIconTop" Glyph="&#xE70E;" FontSize="10" />
+                    <FontIcon x:Name="ToggleAllIconBottom" Glyph="&#xE70E;" FontSize="10" />
+                </StackPanel>
             </Button>
         </Grid>
 

@@ -16,16 +16,8 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid.KeyboardAccelerators>
-            <KeyboardAccelerator Key="F11" Invoked="OnToggleFocus" />
-            <KeyboardAccelerator Modifiers="Control" Key="N" Invoked="OnNewAccel" />
-            <KeyboardAccelerator Modifiers="Control" Key="O" Invoked="OnOpenAccel" />
-            <KeyboardAccelerator Modifiers="Control,Shift" Key="O" Invoked="OnOpenFolderAccel" />
-            <KeyboardAccelerator Modifiers="Control" Key="S" Invoked="OnSaveAccel" />
-            <KeyboardAccelerator Modifiers="Control,Shift" Key="S" Invoked="OnSaveAsAccel" />
-            <KeyboardAccelerator Modifiers="Control" Key="W" Invoked="OnCloseTabAccel" />
-            <KeyboardAccelerator Modifiers="Control" Key="F" Invoked="OnFindAccel" />
-        </Grid.KeyboardAccelerators>
+        <!-- Accelerators are built in code-behind from KeyboardShortcutService
+             so the user can rebind them via Settings → Shortcuts. -->
 
         <!-- Title bar with menu inline -->
         <Grid x:Name="AppTitleBar" Grid.Row="0" Height="40" Padding="0,0,140,0">
@@ -47,36 +39,32 @@
 
             <MenuBar x:Name="AppMenuBar" Grid.Column="1" VerticalAlignment="Center" Background="Transparent">
                 <MenuBarItem Title="File">
-                    <MenuFlyoutItem Text="New" Click="OnNew">
+                    <MenuFlyoutItem x:Name="MiNew" Text="New" Click="OnNew">
                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
                     </MenuFlyoutItem>
-                    <MenuFlyoutItem Text="Open file..." Click="OnOpenFile">
+                    <MenuFlyoutItem x:Name="MiOpenFile" Text="Open file..." Click="OnOpenFile">
                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
                     </MenuFlyoutItem>
-                    <MenuFlyoutItem Text="Open folder..." Click="OnOpenFolder">
+                    <MenuFlyoutItem x:Name="MiOpenFolder" Text="Open folder..." Click="OnOpenFolder">
                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8B7;" /></MenuFlyoutItem.Icon>
                     </MenuFlyoutItem>
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Save" Click="OnSave" />
-                    <MenuFlyoutItem Text="Save as..." Click="OnSaveAs" />
+                    <MenuFlyoutItem x:Name="MiSave"   Text="Save"     Click="OnSave"   />
+                    <MenuFlyoutItem x:Name="MiSaveAs" Text="Save as..." Click="OnSaveAs" />
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem Text="Show Welcome" Click="OnShowWelcome" />
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Close tab" Click="OnCloseTab" />
+                    <MenuFlyoutItem x:Name="MiCloseTab" Text="Close tab" Click="OnCloseTab" />
                     <MenuFlyoutItem Text="Exit" Click="OnExit" />
                 </MenuBarItem>
                 <MenuBarItem Title="View">
                     <MenuFlyoutItem Text="Editor + Preview" Click="OnSplitMode" />
-                    <MenuFlyoutItem Text="Editor only" Click="OnEditorMode" />
-                    <MenuFlyoutItem Text="Preview only" Click="OnPreviewMode" />
+                    <MenuFlyoutItem Text="Editor only"      Click="OnEditorMode" />
+                    <MenuFlyoutItem Text="Preview only"     Click="OnPreviewMode" />
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Find in document..." Click="OnFindInDocument">
-                        <MenuFlyoutItem.KeyboardAcceleratorTextOverride>Ctrl+F</MenuFlyoutItem.KeyboardAcceleratorTextOverride>
-                    </MenuFlyoutItem>
+                    <MenuFlyoutItem x:Name="MiFind" Text="Find in document..." Click="OnFindInDocument" />
                     <MenuFlyoutItem Text="Toggle word wrap" Click="OnToggleWordWrap" />
-                    <MenuFlyoutItem Text="Toggle distraction-free mode" Click="OnToggleFocusMenu">
-                        <MenuFlyoutItem.KeyboardAcceleratorTextOverride>F11</MenuFlyoutItem.KeyboardAcceleratorTextOverride>
-                    </MenuFlyoutItem>
+                    <MenuFlyoutItem x:Name="MiToggleFocus" Text="Toggle distraction-free mode" Click="OnToggleFocusMenu" />
                 </MenuBarItem>
                 <MenuBarItem Title="Help">
                     <MenuFlyoutItem Text="About Markdown Studio" Click="OnAbout" />

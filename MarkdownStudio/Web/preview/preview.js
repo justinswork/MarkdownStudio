@@ -29,6 +29,27 @@
       document.body.classList.add(opts.headingClass);
     }
   }
+  // -------- Keyboard chord matching for rebindable shortcuts --------
+  //
+  // Chord strings are the same format the C# side persists, e.g.
+  // "Ctrl+Shift+E". We normalize KeyboardEvent.key into the same alphabet
+  // (so "ArrowLeft" matches "Left", " " matches "Space", "Escape" matches
+  // "Esc", and letter case is irrelevant). Declared before the seed IIFE
+  // below because that seed pushes into `shortcuts`.
+  var shortcuts = { start: 'Ctrl+E', apply: 'Ctrl+Enter', cancel: 'Esc' };
+  function applyShortcuts(s) {
+    if (!s) return;
+    if (s.start)  shortcuts.start  = s.start;
+    if (s.apply)  shortcuts.apply  = s.apply;
+    if (s.cancel) shortcuts.cancel = s.cancel;
+    // The context menu's kbd hint is built lazily from this object — drop
+    // any cached menu so the next show rebuilds with the new label.
+    if (typeof xrayMenu !== 'undefined' && xrayMenu && xrayMenu.parentNode) {
+      xrayMenu.parentNode.removeChild(xrayMenu);
+    }
+    if (typeof xrayMenu !== 'undefined') xrayMenu = null;
+  }
+
   // Initial seed from URL query params (so new tabs render with the saved
   // settings before the host has a chance to push them).
   (function seedFromQuery() {
@@ -40,7 +61,45 @@
       width:        p.get('pfWidth')  || undefined,
       headingClass: p.get('pfHead')   || 'headings-standard',
     });
+    applyShortcuts({
+      start:  p.get('xrayStart')  || 'Ctrl+E',
+      apply:  p.get('xrayApply')  || 'Ctrl+Enter',
+      cancel: p.get('xrayCancel') || 'Esc',
+    });
   })();
+  function normalizeKey(name) {
+    if (name == null) return '';
+    name = String(name).toLowerCase();
+    if (name === 'escape')     return 'esc';
+    if (name === ' ')          return 'space';
+    if (name === 'arrowleft')  return 'left';
+    if (name === 'arrowright') return 'right';
+    if (name === 'arrowup')    return 'up';
+    if (name === 'arrowdown')  return 'down';
+    return name;
+  }
+  function parseChord(str) {
+    if (!str) return null;
+    var parts = String(str).split('+').map(function (p) { return p.trim(); });
+    if (!parts.length) return null;
+    var keyName = parts[parts.length - 1];
+    var mods    = parts.slice(0, -1).map(function (m) { return m.toLowerCase(); });
+    return {
+      key:   normalizeKey(keyName),
+      ctrl:  mods.indexOf('ctrl')  !== -1 || mods.indexOf('control') !== -1,
+      shift: mods.indexOf('shift') !== -1,
+      alt:   mods.indexOf('alt')   !== -1 || mods.indexOf('menu')    !== -1,
+    };
+  }
+  function chordMatches(e, chordStr) {
+    var c = parseChord(chordStr);
+    if (!c || !c.key) return false;
+    if (normalizeKey(e.key) !== c.key) return false;
+    if (!!e.ctrlKey  !== c.ctrl)  return false;
+    if (!!e.shiftKey !== c.shift) return false;
+    if (!!e.altKey   !== c.alt)   return false;
+    return true;
+  }
 
   var KNOWN_THEMES = ['theme-daylight', 'theme-midnight', 'theme-sepia',
                       'theme-solarized-light', 'theme-solarized-dark'];
@@ -453,7 +512,7 @@
     xrayMenu.innerHTML =
       '<button class="mds-cm-item" data-action="xray" type="button">' +
         '<span class="mds-cm-label">X-ray edit</span>' +
-        '<kbd class="mds-cm-kbd">Ctrl+E</kbd>' +
+        '<kbd class="mds-cm-kbd">' + escapeHtml(shortcuts.start) + '</kbd>' +
       '</button>' +
       '<div class="mds-cm-separator"></div>' +
       '<button class="mds-cm-item" data-action="copy" type="button">' +
@@ -574,8 +633,9 @@
   window.addEventListener('scroll', hideXrayMenu, true);
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') hideXrayMenu();
-    // Ctrl+E starts x-ray on the selection (preferred) or the hovered block.
-    if (e.key === 'e' && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+    // Start-x-ray shortcut (default Ctrl+E) acts on the selection if any,
+    // otherwise the hovered block.
+    if (chordMatches(e, shortcuts.start)) {
       var blocks = findBlocksInSelection();
       if (!blocks || !blocks.length) {
         var hovered = document.querySelector('[data-line]:hover');
@@ -622,7 +682,8 @@
         '<span class="mds-xray-label">' + rangeLbl + '</span>' +
         '<button class="mds-xray-apply"  type="button">Apply</button>' +
         '<button class="mds-xray-cancel" type="button">Cancel</button>' +
-        '<span class="mds-xray-hint">Ctrl+Enter apply · Esc cancel</span>' +
+        '<span class="mds-xray-hint">' + escapeHtml(shortcuts.apply) + ' apply · ' +
+                                          escapeHtml(shortcuts.cancel) + ' cancel</span>' +
       '</div>' +
       '<textarea class="mds-xray-text" spellcheck="false" wrap="soft"></textarea>';
 
@@ -639,8 +700,8 @@
     autoResize();
     textarea.addEventListener('input', autoResize);
     textarea.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { e.preventDefault(); cancelXrayEditor(); }
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); applyXrayEditor(); }
+      if (chordMatches(e, shortcuts.cancel)) { e.preventDefault(); cancelXrayEditor(); }
+      else if (chordMatches(e, shortcuts.apply)) { e.preventDefault(); applyXrayEditor(); }
     });
 
     wrap.querySelector('.mds-xray-apply' ).addEventListener('click', applyXrayEditor);
@@ -704,6 +765,7 @@
     render: render,
     setTheme: setTheme,
     setPreviewOptions: applyPreviewOptions,
+    setShortcuts: applyShortcuts,
     scrollToLine: function (line) {
       lastSyncIn = Date.now();
       scrollToSourceLine(line);

@@ -42,6 +42,12 @@ public sealed partial class EditorPaneControl : UserControl
     public string InitialPreviewWidthCss   { get; set; } = "760px";
     public string InitialPreviewHeadingClass { get; set; } = "headings-standard";
 
+    // X-ray chord bindings (serialized strings like "Ctrl+E"). Pushed into
+    // preview.js so the user's remapped chords drive the in-place editor.
+    public string InitialXrayStartChord  { get; set; } = "Ctrl+E";
+    public string InitialXrayApplyChord  { get; set; } = "Ctrl+Enter";
+    public string InitialXrayCancelChord { get; set; } = "Esc";
+
     public event Action<string>? TextChanged;
     public event Action?         FocusToggleRequested;
 
@@ -108,6 +114,9 @@ public sealed partial class EditorPaneControl : UserControl
             $"pfLh={InitialPreviewLineHeight.ToString(System.Globalization.CultureInfo.InvariantCulture)}",
             $"pfWidth={Uri.EscapeDataString(InitialPreviewWidthCss)}",
             $"pfHead={Uri.EscapeDataString(InitialPreviewHeadingClass)}",
+            $"xrayStart={Uri.EscapeDataString(InitialXrayStartChord)}",
+            $"xrayApply={Uri.EscapeDataString(InitialXrayApplyChord)}",
+            $"xrayCancel={Uri.EscapeDataString(InitialXrayCancelChord)}",
         };
         if (!string.IsNullOrEmpty(InitialPreviewFontFamily))
             previewQueryParts.Add($"pfFamily={Uri.EscapeDataString(InitialPreviewFontFamily)}");
@@ -363,6 +372,17 @@ public sealed partial class EditorPaneControl : UserControl
         });
         await PreviewView.CoreWebView2.ExecuteScriptAsync(
             $"window.host.setPreviewOptions({payload});");
+    }
+
+    public async Task SetXrayShortcutsAsync(string start, string apply, string cancel)
+    {
+        InitialXrayStartChord  = start;
+        InitialXrayApplyChord  = apply;
+        InitialXrayCancelChord = cancel;
+        if (PreviewView.CoreWebView2 == null || !_previewReady.Task.IsCompleted) return;
+        var payload = JsonSerializer.Serialize(new { start, apply, cancel });
+        await PreviewView.CoreWebView2.ExecuteScriptAsync(
+            $"window.host.setShortcuts({payload});");
     }
 
     public async Task SetRenderWhitespaceAsync(bool show)

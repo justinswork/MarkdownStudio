@@ -19,9 +19,10 @@ public sealed partial class SettingsDialog : ContentDialog
         InitializeComponent();
     }
 
-    public ThemePickerView      ThemePicker     => GeneralPane;
-    public SettingsView         EditorSettings  => EditorPane;
-    public PreviewSettingsView  PreviewSettings => PreviewPane;
+    public ThemePickerView         ThemePicker     => GeneralPane;
+    public SettingsView            EditorSettings  => EditorPane;
+    public PreviewSettingsView     PreviewSettings => PreviewPane;
+    public KeyboardShortcutsView   ShortcutSettings => ShortcutsPane;
 
     // Subscribe to live theme changes (the user can switch themes from the
     // General tab while the dialog is open) — update the dialog's

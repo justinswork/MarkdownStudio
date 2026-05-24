@@ -15,6 +15,11 @@ public sealed partial class OutlineView : UserControl
 
     public event Action<OutlineNode>? HeadingActivated;
 
+    // Simple toggle: alternates between expand-all and collapse-all each click,
+    // regardless of what individual chevrons happen to be doing. Starts as
+    // "collapse all" because nodes default to expanded.
+    private bool _nextActionIsExpand;
+
     public OutlineView()
     {
         InitializeComponent();
@@ -66,10 +71,7 @@ public sealed partial class OutlineView : UserControl
 
     private void OnToggleAll(object sender, RoutedEventArgs e)
     {
-        // If any node with children is currently expanded, collapse everything;
-        // otherwise expand everything. Computing on click means user-driven
-        // toggles of individual nodes don't desync the button intent.
-        var expand = !AnyExpanded(Roots);
+        var expand = _nextActionIsExpand;
 
         // Keep the model in sync (so collapse state survives a re-parse and
         // the TwoWay binding remains consistent)…
@@ -83,6 +85,8 @@ public sealed partial class OutlineView : UserControl
         // including deeply nested headings.
         SetTreeNodesExpanded(Tree.RootNodes, expand);
 
+        // Flip intent for the next click.
+        _nextActionIsExpand = !expand;
         RefreshToggleButton();
     }
 
@@ -93,16 +97,6 @@ public sealed partial class OutlineView : UserControl
             node.IsExpanded = expand;
             if (node.Children != null) SetTreeNodesExpanded(node.Children, expand);
         }
-    }
-
-    private static bool AnyExpanded(IEnumerable<OutlineNode> nodes)
-    {
-        foreach (var n in nodes)
-        {
-            if (n.HasChildren && n.IsExpanded) return true;
-            if (AnyExpanded(n.Children)) return true;
-        }
-        return false;
     }
 
     private static void SetAllExpanded(IEnumerable<OutlineNode> nodes, bool expanded)
@@ -116,11 +110,14 @@ public sealed partial class OutlineView : UserControl
 
     private void RefreshToggleButton()
     {
-        // E70E = ChevronUp     (everything's open — click to collapse)
-        // E70D = ChevronDown   (everything's closed — click to expand)
-        var anyExpanded = AnyExpanded(Roots);
-        ToggleAllIcon.Glyph = anyExpanded ? "" : "";
-        var tip = anyExpanded ? "Collapse all" : "Expand all";
+        // Both stacked chevrons point the same direction so the button reads
+        // as a single "double chevron — applies to all" glyph.
+        // E70D = ChevronDown   (next click expands everything)
+        // E70E = ChevronUp     (next click collapses everything)
+        var glyph = _nextActionIsExpand ? "" : "";
+        ToggleAllIconTop.Glyph = glyph;
+        ToggleAllIconBottom.Glyph = glyph;
+        var tip = _nextActionIsExpand ? "Expand all" : "Collapse all";
         ToolTipService.SetToolTip(ToggleAllButton, tip);
         AutomationProperties.SetName(ToggleAllButton, tip);
     }

@@ -22,6 +22,7 @@ public sealed partial class MainWindow : Window
     private readonly AppThemeService _appTheme = new();
     private readonly MruService _mru = new();
     private readonly EditorPreferencesService _prefs = new();
+    private readonly KeyboardShortcutService _shortcuts = new();
     private readonly Dictionary<TabViewItem, EditorPaneControl> _panes = new();
 
     private readonly WelcomeView _welcomeView = new();
@@ -29,7 +30,6 @@ public sealed partial class MainWindow : Window
     private readonly SearchView _searchView = new();
     private readonly OutlineView _outlineView = new();
 
-    private const string DefaultAppPromptKey = "defaultAppPromptShown.v1";
 
     private TabViewItem? _welcomeTab;
     private bool _focusMode;
@@ -62,6 +62,11 @@ public sealed partial class MainWindow : Window
         _appTheme.Changed += t => DispatcherQueue.TryEnqueue(() => ApplyTheme(t));
         ApplyTheme(_appTheme.Selected);
 
+        // Build keyboard accelerators from the service and rebuild on change.
+        // Also pushes the user's x-ray chords down into each editor pane.
+        ApplyShortcuts();
+        _shortcuts.Changed += () => DispatcherQueue.TryEnqueue(ApplyShortcuts);
+
         // Restore the saved view mode before any tabs are created.
         ModeControl.Mode = LoadSavedMode();
 
@@ -69,7 +74,9 @@ public sealed partial class MainWindow : Window
         ShowWelcomeTab();
 
         // After the window's XAML root is wired up, open any files we were
-        // activated with and (on first run) offer to make us the default app.
+        // activated with. The "make us the default markdown handler" affordance
+        // lives in Settings → General → File associations rather than as an
+        // unprompted first-launch dialog.
         RootGrid.Loaded += async (_, _) =>
         {
             await SeedSampleIfFirstRunAsync();
@@ -78,7 +85,6 @@ public sealed partial class MainWindow : Window
                 try { await OpenFileFromPathAsync(path); }
                 catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Startup open failed: {ex.Message}"); }
             }
-            await PromptForDefaultAppAsync();
         };
     }
 
@@ -188,6 +194,7 @@ public sealed partial class MainWindow : Window
         dlg.ThemePicker.ThemeSelected += t => _appTheme.Select(t);
         dlg.EditorSettings.Attach(_prefs);
         dlg.PreviewSettings.Attach(_prefs);
+        dlg.ShortcutSettings.Attach(_shortcuts);
         // Settings dialog uses Sample.md content in both tabs' preview area.
         await dlg.EditorSettings.LoadSampleAsync();
         await dlg.PreviewSettings.LoadSampleAsync();
@@ -355,6 +362,12 @@ public sealed partial class MainWindow : Window
             InitialPreviewLineHeight   = p.PreviewLineHeight,
             InitialPreviewWidthCss     = p.PreviewWidth.CssMaxWidth,
             InitialPreviewHeadingClass = p.PreviewHeadingStyle.CssClass,
+            // Seed x-ray shortcuts so the first keydown after pane init
+            // already knows the user's chords (without waiting for the
+            // post-ready push).
+            InitialXrayStartChord  = _shortcuts.GetBinding(AppCommands.XrayStart).Serialize(),
+            InitialXrayApplyChord  = _shortcuts.GetBinding(AppCommands.XrayApply).Serialize(),
+            InitialXrayCancelChord = _shortcuts.GetBinding(AppCommands.XrayCancel).Serialize(),
         };
         // New tab inherits the current view mode (Editor / Split / Preview).
         _ = pane.SetLayoutAsync(ModeToLayout(ModeControl.Mode));
@@ -526,15 +539,6 @@ public sealed partial class MainWindow : Window
     private async void OnFindInDocument(object sender, RoutedEventArgs e) =>
         await (CurrentPane?.OpenFindAsync() ?? Task.CompletedTask);
 
-    private async void OnFindAccel(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs a)
-    {
-        a.Handled = true;
-        if (CurrentPane is { } pane) await pane.OpenFindAsync();
-    }
-
-    private void OnToggleFocus(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
-    { ToggleFocusMode(); args.Handled = true; }
-
     private void OnToggleFocus(object sender, RoutedEventArgs e)      => ToggleFocusMode();
     private void OnToggleFocusMenu(object sender, RoutedEventArgs e)  => ToggleFocusMode();
 
@@ -551,24 +555,78 @@ public sealed partial class MainWindow : Window
         StatusBar.Visibility = hidden;
     }
 
-    // Accelerators
-    private void OnNewAccel(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs a)
-    { AddEditorTab(); a.Handled = true; }
+    // ---- Keyboard accelerators driven by KeyboardShortcutService ----
+    //
+    // Rebuilt whenever bindings change. Host-side commands get a real
+    // KeyboardAccelerator on RootGrid; the x-ray commands are pushed down
+    // to preview.js (it owns its own keydown handler so it can react in
+    // textareas where WinUI accelerators don't fire).
 
-    private async void OnOpenAccel(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs a)
-    { a.Handled = true; await OpenFileInteractiveAsync(); }
+    private static bool IsHostCommand(string commandId) => commandId switch
+    {
+        AppCommands.XrayStart  or
+        AppCommands.XrayApply  or
+        AppCommands.XrayCancel => false,
+        _                      => true,
+    };
 
-    private async void OnOpenFolderAccel(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs a)
-    { a.Handled = true; await OpenFolderInteractiveAsync(); }
+    private void ApplyShortcuts()
+    {
+        RootGrid.KeyboardAccelerators.Clear();
+        foreach (var cmd in AppCommands.All)
+        {
+            if (!IsHostCommand(cmd.Id)) continue;
+            var chord = _shortcuts.GetBinding(cmd.Id);
+            if (chord.IsEmpty) continue;
+            var accel = new KeyboardAccelerator { Key = chord.Key, Modifiers = chord.Modifiers };
+            var capturedId = cmd.Id;
+            accel.Invoked += (s, a) => { a.Handled = true; InvokeCommand(capturedId); };
+            RootGrid.KeyboardAccelerators.Add(accel);
+        }
+        UpdateMenuShortcutHints();
+        PushXrayShortcutsToPanes();
+    }
 
-    private async void OnSaveAccel(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs a)
-    { a.Handled = true; await SaveCurrentAsync(false); }
+    private void InvokeCommand(string id)
+    {
+        switch (id)
+        {
+            case AppCommands.NewFile:     AddEditorTab(); break;
+            case AppCommands.OpenFile:    _ = OpenFileInteractiveAsync(); break;
+            case AppCommands.OpenFolder:  _ = OpenFolderInteractiveAsync(); break;
+            case AppCommands.Save:        _ = SaveCurrentAsync(false); break;
+            case AppCommands.SaveAs:      _ = SaveCurrentAsync(true); break;
+            case AppCommands.CloseTab:
+                if (Tabs.SelectedItem is TabViewItem item) _ = TryCloseTabAsync(item);
+                break;
+            case AppCommands.Find:        _ = CurrentPane?.OpenFindAsync() ?? Task.CompletedTask; break;
+            case AppCommands.ToggleFocus: ToggleFocusMode(); break;
+        }
+    }
 
-    private async void OnSaveAsAccel(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs a)
-    { a.Handled = true; await SaveCurrentAsync(true); }
+    private void UpdateMenuShortcutHints()
+    {
+        string Display(string id) => _shortcuts.GetBinding(id).ToString();
+        MiNew.KeyboardAcceleratorTextOverride         = Display(AppCommands.NewFile);
+        MiOpenFile.KeyboardAcceleratorTextOverride    = Display(AppCommands.OpenFile);
+        MiOpenFolder.KeyboardAcceleratorTextOverride  = Display(AppCommands.OpenFolder);
+        MiSave.KeyboardAcceleratorTextOverride        = Display(AppCommands.Save);
+        MiSaveAs.KeyboardAcceleratorTextOverride      = Display(AppCommands.SaveAs);
+        MiCloseTab.KeyboardAcceleratorTextOverride    = Display(AppCommands.CloseTab);
+        MiFind.KeyboardAcceleratorTextOverride        = Display(AppCommands.Find);
+        MiToggleFocus.KeyboardAcceleratorTextOverride = Display(AppCommands.ToggleFocus);
+    }
 
-    private async void OnCloseTabAccel(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs a)
-    { a.Handled = true; if (Tabs.SelectedItem is TabViewItem item) await TryCloseTabAsync(item); }
+    private void PushXrayShortcutsToPanes()
+    {
+        var start  = _shortcuts.GetBinding(AppCommands.XrayStart).Serialize();
+        var apply  = _shortcuts.GetBinding(AppCommands.XrayApply).Serialize();
+        var cancel = _shortcuts.GetBinding(AppCommands.XrayCancel).Serialize();
+        foreach (var pane in _panes.Values)
+        {
+            _ = pane.SetXrayShortcutsAsync(start, apply, cancel);
+        }
+    }
 
     private async Task SaveCurrentAsync(bool saveAs)
     {
@@ -609,36 +667,6 @@ public sealed partial class MainWindow : Window
     private async void OnAbout(object sender, RoutedEventArgs e) =>
         await ShowMessageAsync("Markdown Studio",
             "A premium native markdown editor for Windows.\nBuilt with WinUI 3 and .NET 10.");
-
-    private async Task PromptForDefaultAppAsync()
-    {
-        var values = Windows.Storage.ApplicationData.Current.LocalSettings.Values;
-        if (values[DefaultAppPromptKey] is bool shown && shown) return;
-        // Mark as shown up front so we never re-prompt even if the dialog
-        // throws or the user closes the window mid-prompt.
-        values[DefaultAppPromptKey] = true;
-
-        var dialog = new ContentDialog
-        {
-            Title = "Make Markdown Studio your default?",
-            Content = "Open Markdown files from File Explorer with a single click. " +
-                      "We'll take you to Windows Settings → Default apps where you can pick Markdown Studio for .md and other Markdown extensions.",
-            PrimaryButtonText = "Open Settings",
-            SecondaryButtonText = "Maybe later",
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = RootGrid.XamlRoot,
-        };
-
-        ContentDialogResult result;
-        try { result = await dialog.ShowAsync(); }
-        catch { return; }
-
-        if (result == ContentDialogResult.Primary)
-        {
-            try { await Windows.System.Launcher.LaunchUriAsync(new Uri("ms-settings:defaultapps")); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Launch settings failed: {ex.Message}"); }
-        }
-    }
 
     private async Task ShowMessageAsync(string title, string message)
     {
