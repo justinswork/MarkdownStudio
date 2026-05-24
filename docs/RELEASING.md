@@ -1,14 +1,11 @@
 # Releasing Markdown Studio
 
-Releases are produced by GitHub Actions (`.github/workflows/release.yml`)
-on any pushed tag matching `v*`. The workflow builds an x64 + ARM64
-`.msixbundle`, signs it with the project's self-signed certificate, and
-attaches both the bundle and the public `.cer` to a GitHub Release.
+Releases are built locally by `build-release.ps1`, then manually uploaded
+to a GitHub Release. The signing cert never leaves your machine — it
+lives in your user-account certificate store and the build script looks
+it up by Subject.
 
 ## One-time setup
-
-You only need to do this once. After it's done, every release is just
-`git tag v0.x.y && git push origin v0.x.y`.
 
 ### 1. Generate the self-signed signing certificate
 
@@ -19,8 +16,9 @@ If you change the manifest publisher you have to regenerate the cert.
 Run this in PowerShell on Windows:
 
 ```powershell
-# 5-year self-signed code-signing cert
-$cert = New-SelfSignedCertificate `
+# 5-year self-signed code-signing cert. It's installed into your user's
+# certificate store; the private key never lands on disk.
+New-SelfSignedCertificate `
     -Type CodeSigningCert `
     -Subject "CN=MarkdownStudio" `
     -KeyUsage DigitalSignature `
@@ -31,59 +29,78 @@ $cert = New-SelfSignedCertificate `
         "2.5.29.37={text}1.3.6.1.5.5.7.3.3",   # EKU: code signing
         "2.5.29.19={text}"                      # Basic constraints
     )
+```
 
-# Export the public cert (this is what end users install to Trusted Root).
-# Safe to attach to releases; do not commit to the repo (.gitignore covers it).
+That's it — no PFX file, no password, no GitHub Secrets. The cert is
+in `Cert:\CurrentUser\My` and `build-release.ps1` finds it by Subject.
+
+### 2. (Optional) Export the public .cer for your records
+
+`build-release.ps1` already emits a fresh `.cer` next to every bundle
+it produces (MSBuild does this automatically). If you want a standalone
+copy to share:
+
+```powershell
+$cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object Subject -eq "CN=MarkdownStudio" | Select-Object -First 1
 $cert | Export-Certificate -FilePath "MarkdownStudio.cer" -Type CERT
-
-# Export the PFX (private key) with a password you keep secret.
-# This file goes into a GitHub Actions secret, then delete the local copy.
-$pwd = Read-Host -AsSecureString -Prompt "PFX password (used in CI secret)"
-$cert | Export-PfxCertificate -FilePath "MarkdownStudio.pfx" -Password $pwd
-```
-
-### 2. Upload the PFX to GitHub Secrets
-
-```powershell
-# Copy the base64-encoded PFX to your clipboard
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("MarkdownStudio.pfx")) | Set-Clipboard
-```
-
-In the GitHub repo → **Settings** → **Secrets and variables** → **Actions**
-→ **New repository secret**, create:
-
-- **`SIGNING_CERT_BASE64`** — paste the base64 string from your clipboard.
-- **`SIGNING_CERT_PASSWORD`** — the plaintext password you set above.
-
-### 3. Delete the local PFX
-
-Once both secrets are saved, delete `MarkdownStudio.pfx` from your machine.
-The CI runner is the only place that needs the private key. (The `.cer`
-public cert can stay around — you'll attach it to releases.)
-
-```powershell
-Remove-Item MarkdownStudio.pfx
 ```
 
 ## Cutting a release
 
-```powershell
-# Bump version in the commit message / changelog if you want.
-git tag v0.1.0
-git push origin v0.1.0
-```
+1. From the repo root, in a **Developer PowerShell for VS 2022** (so
+   `msbuild` is on PATH):
 
-Watch the **Actions** tab. On success, the **Releases** page will have a
-new release with two attached files:
+   ```powershell
+   pwsh ./build-release.ps1 -Version 0.1.0
+   ```
 
-- `MarkdownStudio-0.1.0.0-x64-arm64.msixbundle`
-- `MarkdownStudio-0.1.0.0.cer`
+   The script:
+   - Stamps version `0.1.0.0` into `Package.appxmanifest` (reverted at
+     end so your working tree stays clean).
+   - Builds a signed x64+ARM64 `.msixbundle`.
+   - Copies the bundle and matching `.cer` into `./release/`.
 
-The release body already contains the install instructions for end users.
+2. Tag the commit and push:
+
+   ```powershell
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+
+3. Create the GitHub Release in the UI:
+
+   - Go to **Releases → Draft a new release**.
+   - Choose the `v0.1.0` tag.
+   - Drag both files from `./release/` into the attachments area.
+   - Paste this into the release body (adjust version numbers):
+
+     ```markdown
+     ## Install
+
+     Markdown Studio is signed with a self-signed certificate. Windows
+     needs to trust it once before the installer will run.
+
+     1. Download **`MarkdownStudio-0.1.0.0.cer`** below.
+     2. Right-click → **Install Certificate** → **Local Machine** →
+        **Place all certificates in the following store** →
+        **Trusted Root Certification Authorities** → Finish.
+     3. Download **`MarkdownStudio-0.1.0.0-x64-arm64.msixbundle`** below.
+     4. Double-click to install.
+
+     (Only needed on first install. Future versions install directly.)
+     ```
+
+   - Publish.
 
 ## Rotating the certificate
 
-Self-signed certs expire (5 years in our setup). When you regenerate, the
-manifest `Publisher` must still match the new cert's `CN`, and existing
-users will need to install the new `.cer` before upgrading. Plan the cert
-rotation alongside a versioned upgrade announcement.
+Self-signed certs expire (5 years in our setup). When you regenerate,
+the new cert must keep `CN=MarkdownStudio` (so it still matches the
+manifest publisher), and existing users will need to install the new
+`.cer` before upgrading. Plan the rotation alongside a versioned
+upgrade announcement.
+
+If the old cert is still in your store, delete it after the new one is
+working — `build-release.ps1` picks the cert with the *latest* `NotAfter`
+when multiple match the Subject, so leaving an expired one in place is
+harmless but messy.

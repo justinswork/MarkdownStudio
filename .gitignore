@@ -10,6 +10,8 @@ obj/
 # Packaging
 AppPackages/
 BundleArtifacts/
+appxout/
+release/
 *.appx
 *.appxbundle
 *.msix
