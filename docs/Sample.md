@@ -38,7 +38,7 @@ def fibonacci(n):
 flowchart LR
     A[Open folder] --> B{Is it markdown?}
     B -->|yes| C[Show in tree]
-    B -->|no|  D[Hide]
+    B -->|no| D[Hide]
 ```
 
 ### Tables
