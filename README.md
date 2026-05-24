@@ -1,14 +1,12 @@
 # Markdown Studio
 
-A premium native Windows markdown editor with the editing chops of a full code editor on one side, a live preview on the other, and a few opinionated features designed to make working with markdown feel direct rather than fiddly.
+A native Windows markdown editor whose headline feature is **X-ray edit** — right-click any rendered block in the preview to edit its raw markdown in place, then `Ctrl+Enter` to apply. No more bouncing between a source pane and a preview pane to fix a typo or tweak a heading.
 
 It's also a great markdown **reader**. Open any folder — a documentation site, a repo full of READMEs, your library of AI prompt files — and the sidebar filters down to just the `.md` files. No source code, lockfiles, or build artifacts crowding the view; just the docs you actually came to read.
 
-The headline feature is **X-ray edit**: a way to peek through the rendered preview and edit any block's raw markdown right where it sits.
-
 ---
 
-## ⌧ X-ray edit
+## X-ray edit
 
 ![X-ray edit in action](docs/MarkdownXRay.gif)
 
@@ -38,7 +36,24 @@ Under the hood, X-ray uses markdown-it's source-map metadata to tag every render
 
 ---
 
-## Getting started
+## Install
+
+Grab the latest **`.msixbundle`** and **`.cer`** from the
+[Releases](https://github.com/justinswork/MarkdownStudio/releases) page.
+
+Markdown Studio is signed with a self-signed certificate, so Windows needs to
+trust it once before the installer will run.
+
+1. Right-click the downloaded `.cer` → **Install Certificate** →
+   **Local Machine** → **Place all certificates in the following store** →
+   **Trusted Root Certification Authorities** → **OK** → **Finish**.
+2. Double-click the `.msixbundle` and click **Install**.
+
+Subsequent versions install directly without the certificate step.
+
+---
+
+## Getting started (from source)
 
 ### Prerequisites
 
@@ -78,27 +93,6 @@ $pkg   = Get-AppxPackage -Name 'MarkdownStudio' | Select-Object -First 1
 $appId = (Get-AppxPackageManifest $pkg.PackageFullName).Package.Applications.Application.Id
 Start-Process "shell:AppsFolder\$($pkg.PackageFamilyName)!$appId"
 ```
-
----
-
-## Keyboard shortcuts
-
-| Action | Shortcut |
-|---|---|
-| New file (opens in Editor mode) | `Ctrl+N` |
-| Open file | `Ctrl+O` |
-| Open folder | `Ctrl+Shift+O` |
-| Save | `Ctrl+S` |
-| Save as | `Ctrl+Shift+S` |
-| Close tab | `Ctrl+W` |
-| **X-ray edit (selection or hovered block)** | `Ctrl+E` |
-| **X-ray apply / cancel** | `Ctrl+Enter` / `Esc` |
-| Find in editor | `Ctrl+F` |
-| Toggle bold / italic | `Ctrl+B` / `Ctrl+I` |
-| Insert link | `Ctrl+K` |
-| Toggle inline code | `` Ctrl+` `` |
-| Distraction-free mode | `F11` |
-| View mode: Editor / Split / Preview | (toolbar pill) |
 
 ---
 
