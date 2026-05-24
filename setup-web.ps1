@@ -48,7 +48,29 @@ try {
 
     # ---- Monaco editor ----
     $monacoPkg = Get-NpmPackage -Name 'monaco-editor' -Version '0.52.2'
-    Copy-Tree -Src (Join-Path $monacoPkg 'min\vs') -Dest (Join-Path $editorMonacoDir 'vs')
+    $monacoVs  = Join-Path $editorMonacoDir 'vs'
+    Copy-Tree -Src (Join-Path $monacoPkg 'min\vs') -Dest $monacoVs
+
+    # Prune Monaco bits that trip Windows MakePri's resource-qualifier parser
+    # (PRI249 / PRI257 / PRI263 warnings during MSIX packaging) and that we
+    # don't actually use:
+    #   - nls.messages.{zh-cn,zh-tw}.js: Monaco's own UI localized for
+    #     Chinese. MakePri parses the dotted filename and rejects "ZH-CN"
+    #     as an invalid Windows qualifier. We never expose Monaco's UI in
+    #     a non-English locale, so the files are dead weight.
+    #   - basic-languages/st/: Monaco's Smalltalk syntax highlighter. "st"
+    #     is also the ISO 639-1 code for Sotho, so MakePri thinks this
+    #     folder is Sotho-language resources and complains about the
+    #     missing en-US default. We never edit Smalltalk in a markdown
+    #     editor.
+    $pruneTargets = @(
+        (Join-Path $monacoVs 'nls.messages.zh-cn.js'),
+        (Join-Path $monacoVs 'nls.messages.zh-tw.js'),
+        (Join-Path $monacoVs 'basic-languages\st')
+    )
+    foreach ($t in $pruneTargets) {
+        if (Test-Path $t) { Remove-Item -Recurse -Force $t }
+    }
 
     # ---- markdown-it core ----
     $mdItPkg = Get-NpmPackage -Name 'markdown-it' -Version '14.1.0'

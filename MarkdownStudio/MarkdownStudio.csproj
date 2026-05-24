@@ -7,6 +7,20 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <!-- AppxBundle cycles Platform per leg (x64, ARM64) when bundling. The
+         RuntimeIdentifier needs to follow or NETSDK1032 fires when the ARM64
+         pass keeps the win-x64 RID from the previous leg. -->
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Platform)' == 'x64'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Platform)' == 'ARM64'">
+    <RuntimeIdentifier>win-arm64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsPackageType>MSIX</WindowsPackageType>
@@ -23,6 +37,11 @@
     <AppxBundlePlatforms>x64</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
     <SelfContained>true</SelfContained>
+    <!-- en-US is the only language we ship strings in. setup-web.ps1 prunes
+         Monaco's nls.messages.zh-cn.js, .zh-tw.js, and basic-languages/st/
+         folder after download so MakePri doesn't mis-detect them as
+         language-qualified resources. -->
+    <DefaultLanguage>en-US</DefaultLanguage>
   </PropertyGroup>
 
   <ItemGroup>

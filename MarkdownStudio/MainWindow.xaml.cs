@@ -667,9 +667,33 @@ public sealed partial class MainWindow : Window
         return true;
     }
 
-    private async void OnAbout(object sender, RoutedEventArgs e) =>
-        await ShowMessageAsync("Markdown Studio",
-            "A premium native markdown editor for Windows.\nBuilt with WinUI 3 and .NET 10.");
+    private async void OnAbout(object sender, RoutedEventArgs e)
+    {
+        var version = TryGetPackageVersionString();
+        var body = (version is null ? "" : $"Version {version}\n\n") +
+                   "A native markdown editor for Windows.\nBuilt with WinUI 3 and .NET 10.";
+        await ShowMessageAsync("Markdown Studio", body);
+    }
+
+    // Reads the version stamped into Package.appxmanifest at build time
+    // (build-release.ps1 stamps it from the -Version argument, so there's a
+    // single source of truth). Trailing-zero parts are dropped for a tidier
+    // display: 0.1.0.0 -> "0.1.0", 0.1.2.3 -> "0.1.2.3". Returns null on
+    // unpackaged dev runs where Package.Current isn't available.
+    private static string? TryGetPackageVersionString()
+    {
+        try
+        {
+            var v = Windows.ApplicationModel.Package.Current.Id.Version;
+            if (v.Revision == 0 && v.Build == 0) return $"{v.Major}.{v.Minor}";
+            if (v.Revision == 0)                 return $"{v.Major}.{v.Minor}.{v.Build}";
+            return $"{v.Major}.{v.Minor}.{v.Build}.{v.Revision}";
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     private async Task ShowMessageAsync(string title, string message)
     {

@@ -64,11 +64,21 @@ if (-not $msbuild) {
 }
 
 # --- Stamp manifest version (reverted in finally) --------------------------
+# We do this with a regex replace on the raw text rather than [xml]…$xml.Save()
+# because the latter reformats the whole manifest (joins attributes onto a
+# single line, strips blank lines, prepends a BOM), which leaves a noisy diff
+# in the working tree even after the finally-block restore.
+$utf8NoBom    = New-Object System.Text.UTF8Encoding $false
 $manifestPath = Join-Path $PSScriptRoot 'MarkdownStudio\Package.appxmanifest'
-$xml = [xml](Get-Content $manifestPath)
-$originalVersion = $xml.Package.Identity.Version
-$xml.Package.Identity.Version = $msixVersion
-$xml.Save((Resolve-Path $manifestPath))
+$originalManifest = [System.IO.File]::ReadAllText($manifestPath, [System.Text.Encoding]::UTF8)
+$stampedManifest  = [regex]::Replace(
+    $originalManifest,
+    '(<Identity\b[^>]*\bVersion=")[\d.]+(")',
+    "`${1}$msixVersion`${2}")
+if ($stampedManifest -eq $originalManifest) {
+    throw "Couldn't find an Identity Version= attribute in $manifestPath to stamp."
+}
+[System.IO.File]::WriteAllText($manifestPath, $stampedManifest, $utf8NoBom)
 
 try {
     # --- Clean previous build output --------------------------------------
@@ -81,14 +91,20 @@ try {
     # SideloadOnly produces a sideload package (not the .appxupload Store
     # format). MSBuild signs in-place via PackageCertificateThumbprint,
     # which it looks up in Cert:\CurrentUser\My.
+    # GenerateAppxPackageOnBuild=true makes the regular Build target also
+    # invoke the MSIX packaging targets. Without it MSBuild compiles and
+    # copies content but never writes a .msix / .msixbundle — the script
+    # would then fail the "no .msixbundle was produced" check.
     & $msbuild "$PSScriptRoot\MarkdownStudio\MarkdownStudio.csproj" `
         /restore `
         /p:Configuration=Release `
         /p:Platform=x64 `
+        /p:GenerateAppxPackageOnBuild=true `
         /p:AppxBundle=Always `
         /p:AppxBundlePlatforms="x64|ARM64" `
         /p:UapAppxPackageBuildMode=SideloadOnly `
         /p:GenerateAppInstallerFile=False `
+        /p:AppxAutoIncrementPackageRevision=false `
         /p:AppxPackageSigningEnabled=true `
         /p:PackageCertificateThumbprint=$($cert.Thumbprint) `
         /p:AppxPackageDir="$appxOut\"
@@ -125,7 +141,5 @@ finally {
     # change. (We deliberately don't commit the bump — releases are tagged on
     # the canonical commit, and the manifest only carries a real version at
     # build time.)
-    $xml = [xml](Get-Content $manifestPath)
-    $xml.Package.Identity.Version = $originalVersion
-    $xml.Save((Resolve-Path $manifestPath))
+    [System.IO.File]::WriteAllText($manifestPath, $originalManifest, $utf8NoBom)
 }
