@@ -130,8 +130,11 @@ public sealed partial class MainWindow : Window
 
     private static EditorMode LoadSavedMode()
     {
+        // Default to Preview on first launch — this is a reader-first app
+        // (markdown viewing being the primary use case, editing secondary).
+        // Once the user picks a different mode it's persisted and that wins.
         var raw = Windows.Storage.ApplicationData.Current.LocalSettings.Values[ViewModeKey] as string;
-        return Enum.TryParse<EditorMode>(raw, out var m) ? m : EditorMode.Split;
+        return Enum.TryParse<EditorMode>(raw, out var m) ? m : EditorMode.Preview;
     }
 
     private static void SaveMode(EditorMode mode)
