@@ -50,6 +50,8 @@ public sealed partial class EditorPaneControl : UserControl
 
     public event Action<string>? TextChanged;
     public event Action?         FocusToggleRequested;
+    public event Action?         SaveRequested;
+    public event Action?         SaveAsRequested;
 
     public EditorPaneControl()
     {
@@ -157,6 +159,16 @@ public sealed partial class EditorPaneControl : UserControl
                     break;
                 case "toggleFocus":
                     FocusToggleRequested?.Invoke();
+                    break;
+                case "save":
+                    // Monaco's Ctrl+S keybinding posts this. We can't drive
+                    // SaveCurrentAsync directly from here because the host
+                    // owns the picker / dirty flag / MRU state — surface it
+                    // as an event for MainWindow to handle.
+                    SaveRequested?.Invoke();
+                    break;
+                case "saveAs":
+                    SaveAsRequested?.Invoke();
                     break;
             }
         }

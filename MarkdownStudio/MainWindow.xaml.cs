@@ -380,6 +380,11 @@ public sealed partial class MainWindow : Window
                 _outlineView.SetNodes(OutlineService.Parse(text));
         });
         pane.FocusToggleRequested += () => DispatcherQueue.TryEnqueue(ToggleFocusMode);
+        // Ctrl+S / Ctrl+Shift+S in the Monaco editor are caught by Monaco
+        // before WebView2's Edge runtime can swallow them as a browser
+        // "Save Page" accelerator; the editor posts them up to here.
+        pane.SaveRequested   += () => DispatcherQueue.TryEnqueue(() => _ = SaveCurrentAsync(false));
+        pane.SaveAsRequested += () => DispatcherQueue.TryEnqueue(() => _ = SaveCurrentAsync(true));
 
         var tab = new TabViewItem
         {

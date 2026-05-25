@@ -201,6 +201,21 @@
       run: function (ed) { wrapSelection(ed, '`', '`'); },
     });
 
+    // Save / Save As. Registered as Monaco actions so they fire *before*
+    // WebView2's underlying Edge runtime intercepts Ctrl+S as the browser
+    // "Save Page" accelerator — without this, the keypress is swallowed by
+    // the WebView and the WinUI host accelerator never sees it.
+    editor.addAction({
+      id: 'mds.save', label: 'Markdown Studio: Save',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+      run: function () { postToHost({ type: 'save' }); },
+    });
+    editor.addAction({
+      id: 'mds.saveAs', label: 'Markdown Studio: Save As...',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS],
+      run: function () { postToHost({ type: 'saveAs' }); },
+    });
+
     window.host = {
       setText: function (text) {
         lastSent = text;
