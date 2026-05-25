@@ -6,14 +6,18 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap uap5 rescap">
 
+  <!-- Identity Name + Publisher are Microsoft Store-assigned values from
+       Partner Center (app reservation 9PK8FQXH4JKZ). Don't edit these by
+       hand — they must match exactly what's registered for the app or
+       Store certification rejects the submission. -->
   <Identity
-    Name="MarkdownStudio"
-    Publisher="CN=MarkdownStudio"
+    Name="JustinKing.MarkdownStudio"
+    Publisher="CN=7FF40E1D-C390-4E69-A012-910F68FFFA3A"
     Version="0.1.0.0" />
 
   <Properties>
     <DisplayName>Markdown Studio</DisplayName>
-    <PublisherDisplayName>Markdown Studio</PublisherDisplayName>
+    <PublisherDisplayName>Justin King</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 

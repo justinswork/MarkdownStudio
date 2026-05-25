@@ -1,106 +1,62 @@
 # Releasing Markdown Studio
 
-Releases are built locally by `build-release.ps1`, then manually uploaded
-to a GitHub Release. The signing cert never leaves your machine — it
-lives in your user-account certificate store and the build script looks
-it up by Subject.
+Markdown Studio ships through the Microsoft Store (Partner Center app
+`9PK8FQXH4JKZ`). Each release is built locally by `build-release.ps1`
+into an unsigned `.msixupload` package, then uploaded by hand to a new
+submission in Partner Center. The Store signs the package with a
+Microsoft-issued cert during certification — end users get the package
+signed by Microsoft.
 
-## One-time setup
-
-### 1. Generate the self-signed signing certificate
-
-The cert's Subject **must** match the `Publisher` field in
-`MarkdownStudio/Package.appxmanifest`. Today that's `CN=MarkdownStudio`.
-If you change the manifest publisher you have to regenerate the cert.
-
-Run this in PowerShell on Windows:
-
-```powershell
-# 5-year self-signed code-signing cert. It's installed into your user's
-# certificate store; the private key never lands on disk.
-New-SelfSignedCertificate `
-    -Type CodeSigningCert `
-    -Subject "CN=MarkdownStudio" `
-    -KeyUsage DigitalSignature `
-    -FriendlyName "MarkdownStudio Code Signing" `
-    -CertStoreLocation "Cert:\CurrentUser\My" `
-    -NotAfter (Get-Date).AddYears(5) `
-    -TextExtension @(
-        "2.5.29.37={text}1.3.6.1.5.5.7.3.3",   # EKU: code signing
-        "2.5.29.19={text}"                      # Basic constraints
-    )
-```
-
-That's it — no PFX file, no password, no GitHub Secrets. The cert is
-in `Cert:\CurrentUser\My` and `build-release.ps1` finds it by Subject.
-
-### 2. (Optional) Export the public .cer for your records
-
-`build-release.ps1` already emits a fresh `.cer` next to every bundle
-it produces (MSBuild does this automatically). If you want a standalone
-copy to share:
-
-```powershell
-$cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object Subject -eq "CN=MarkdownStudio" | Select-Object -First 1
-$cert | Export-Certificate -FilePath "MarkdownStudio.cer" -Type CERT
-```
+There's no self-signed cert to maintain. F5 in Visual Studio handles
+dev-build signing automatically with its own temp key.
 
 ## Cutting a release
 
-1. From the repo root, in a **Developer PowerShell for VS 2022** (so
-   `msbuild` is on PATH):
+1. **Build the upload package.** From the repo root, in a Developer
+   PowerShell for VS 2022 (so `msbuild` is on PATH):
 
    ```powershell
    pwsh ./build-release.ps1 -Version 0.1.0
    ```
 
-   The script:
-   - Stamps version `0.1.0.0` into `Package.appxmanifest` (reverted at
-     end so your working tree stays clean).
-   - Builds a signed x64+ARM64 `.msixbundle`.
-   - Copies the bundle and matching `.cer` into `./release/`.
+   The script stamps the version into the manifest, builds x64+ARM64
+   into a single unsigned `.msixupload`, and copies it to `./release/`.
+   The manifest version bump is reverted at the end so the working
+   tree stays clean.
 
-2. Tag the commit and push:
+2. **Submit to Partner Center.**
+   - Open <https://partner.microsoft.com/dashboard/products/9PK8FQXH4JKZ>.
+   - Start a new submission.
+   - **Packages** → drag the `MarkdownStudio-<version>-x64-arm64.msixupload`
+     from `./release/` into the upload area.
+   - Fill out the remaining sections (description, screenshots, age
+     rating, pricing, markets) for the first submission. On subsequent
+     submissions most of these carry over.
+   - Submit. Certification typically takes 24–72 hours for the first
+     submission, faster on updates.
+
+3. **Tag the commit** so the published version maps back to source:
 
    ```powershell
    git tag v0.1.0
    git push origin v0.1.0
    ```
 
-3. Create the GitHub Release in the UI:
+## After certification
 
-   - Go to **Releases → Draft a new release**.
-   - Choose the `v0.1.0` tag.
-   - Drag both files from `./release/` into the attachments area.
-   - Paste this into the release body (adjust version numbers):
+The app shows up at <https://apps.microsoft.com/detail/9PK8FQXH4JKZ>
+and is installable via the Store app or `winget install`. Users
+upgrading get the new version automatically through the Store's update
+service.
 
-     ```markdown
-     ## Install
+## Notes
 
-     Markdown Studio is signed with a self-signed certificate. Windows
-     needs to trust it once before the installer will run.
-
-     1. Download **`MarkdownStudio-0.1.0.0.cer`** below.
-     2. Right-click → **Install Certificate** → **Local Machine** →
-        **Place all certificates in the following store** →
-        **Trusted Root Certification Authorities** → Finish.
-     3. Download **`MarkdownStudio-0.1.0.0-x64-arm64.msixbundle`** below.
-     4. Double-click to install.
-
-     (Only needed on first install. Future versions install directly.)
-     ```
-
-   - Publish.
-
-## Rotating the certificate
-
-Self-signed certs expire (5 years in our setup). When you regenerate,
-the new cert must keep `CN=MarkdownStudio` (so it still matches the
-manifest publisher), and existing users will need to install the new
-`.cer` before upgrading. Plan the rotation alongside a versioned
-upgrade announcement.
-
-If the old cert is still in your store, delete it after the new one is
-working — `build-release.ps1` picks the cert with the *latest* `NotAfter`
-when multiple match the Subject, so leaving an expired one in place is
-harmless but messy.
+- **The unsigned `.msixupload` can't be sideloaded for local smoke
+  testing.** Windows refuses to install a bundle with no valid
+  signature. For day-to-day verification use F5 in Visual Studio
+  (which signs with VS's own dev cert), or upload to Partner Center
+  and use a flighting track for pre-release builds.
+- **Don't edit the Identity Name or Publisher** in
+  `MarkdownStudio/Package.appxmanifest`. They have to match exactly
+  what's registered for Store ID `9PK8FQXH4JKZ` in Partner Center, or
+  certification rejects the submission.

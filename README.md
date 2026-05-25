@@ -38,18 +38,16 @@ Under the hood, X-ray uses markdown-it's source-map metadata to tag every render
 
 ## Install
 
-Grab the latest **`.msixbundle`** and **`.cer`** from the
-[Releases](https://github.com/justinswork/MarkdownStudio/releases) page.
+Install from the **Microsoft Store**:
+<https://apps.microsoft.com/detail/9PK8FQXH4JKZ>
 
-Markdown Studio is signed with a self-signed certificate, so Windows needs to
-trust it once before the installer will run.
+Or via `winget`:
 
-1. Right-click the downloaded `.cer` → **Install Certificate** →
-   **Local Machine** → **Place all certificates in the following store** →
-   **Trusted Root Certification Authorities** → **OK** → **Finish**.
-2. Double-click the `.msixbundle` and click **Install**.
+```powershell
+winget install --id 9PK8FQXH4JKZ
+```
 
-Subsequent versions install directly without the certificate step.
+Updates arrive automatically through the Store.
 
 ---
 

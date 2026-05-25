@@ -1,12 +1,22 @@
 <#
 .SYNOPSIS
-    Build, sign, and stage a release MSIX bundle locally.
+    Build and stage a Microsoft Store upload package locally.
 
 .DESCRIPTION
-    Looks up the signing cert by Subject in the current user's certificate
-    store, stamps the version into Package.appxmanifest, builds an x64+ARM64
-    .msixbundle, signs it, and copies the bundle plus the public .cer into
-    .\release\ ready to be manually uploaded to a GitHub Release.
+    Stamps the version into Package.appxmanifest, builds an unsigned
+    x64+ARM64 Store-upload bundle (.msixupload), and copies it into
+    .\release\ ready to be manually uploaded to Partner Center for the
+    reserved app (Store ID 9PK8FQXH4JKZ).
+
+    The package is intentionally unsigned: Partner Center accepts
+    unsigned uploads and the Store signs the final package with a
+    Microsoft-issued cert during certification. Skipping local signing
+    means no self-signed cert to generate or rotate.
+
+    Note: the unsigned .msixupload can't be sideloaded for local testing
+    (its inner .msixbundle has no signature Windows will trust). For
+    day-to-day debugging use F5 in Visual Studio — VS signs dev builds
+    with its own temporary key.
 
     The manifest version bump is reverted after the build so it doesn't
     show up as a stray change in your working tree.
@@ -15,23 +25,16 @@
     Release version. Accepts "v0.1.0", "0.1.0", or any leading-v variant.
     Internally padded to a 4-part MSIX version (e.g. 0.1.0.0).
 
-.PARAMETER CertSubject
-    Subject of the code-signing certificate to look up in
-    Cert:\CurrentUser\My. Must match the Publisher in
-    MarkdownStudio\Package.appxmanifest. Defaults to "CN=MarkdownStudio".
-
 .EXAMPLE
     pwsh ./build-release.ps1 -Version 0.1.0
 
 .NOTES
     Run from a Developer PowerShell (or any shell where msbuild is on PATH).
-    See docs/RELEASING.md for the one-time cert setup.
+    See docs/RELEASING.md for the Partner Center submission steps.
 #>
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Version,
-
-    [string]$CertSubject = 'CN=MarkdownStudio'
+    [string]$Version
 )
 
 $ErrorActionPreference = 'Stop'
@@ -44,18 +47,6 @@ if ($parts.Count -gt 4) { throw "Version must have at most 4 parts; got '$Versio
 $msixVersion = ($parts[0..3] -join '.')
 $tagName     = if ($Version.StartsWith('v')) { $Version } else { "v$semver" }
 Write-Host "Building MarkdownStudio $msixVersion (tag $tagName)"
-
-# --- Find cert in user's cert store ----------------------------------------
-$cert = Get-ChildItem -Path Cert:\CurrentUser\My |
-    Where-Object { $_.Subject -eq $CertSubject } |
-    Sort-Object NotAfter -Descending |
-    Select-Object -First 1
-if (-not $cert) {
-    throw "No code-signing cert with Subject '$CertSubject' in Cert:\CurrentUser\My. See docs/RELEASING.md."
-}
-Write-Host "Using cert: $($cert.Subject)"
-Write-Host "  Thumbprint: $($cert.Thumbprint)"
-Write-Host "  Expires:    $($cert.NotAfter.ToString('yyyy-MM-dd'))"
 
 # --- Locate msbuild --------------------------------------------------------
 $msbuild = (Get-Command msbuild -ErrorAction SilentlyContinue).Source
@@ -92,9 +83,11 @@ try {
     # format). MSBuild signs in-place via PackageCertificateThumbprint,
     # which it looks up in Cert:\CurrentUser\My.
     # GenerateAppxPackageOnBuild=true makes the regular Build target also
-    # invoke the MSIX packaging targets. Without it MSBuild compiles and
-    # copies content but never writes a .msix / .msixbundle — the script
-    # would then fail the "no .msixbundle was produced" check.
+    # invoke the MSIX packaging targets. UapAppxPackageBuildMode=StoreUpload
+    # produces a .msixupload (a zip containing the .msixbundle plus per-arch
+    # symbol packages) — the format Partner Center ingests. Signing is off:
+    # Partner Center accepts unsigned uploads and the Store signs the final
+    # package with a Microsoft-issued cert during certification.
     & $msbuild "$PSScriptRoot\MarkdownStudio\MarkdownStudio.csproj" `
         /restore `
         /p:Configuration=Release `
@@ -102,39 +95,34 @@ try {
         /p:GenerateAppxPackageOnBuild=true `
         /p:AppxBundle=Always `
         /p:AppxBundlePlatforms="x64|ARM64" `
-        /p:UapAppxPackageBuildMode=SideloadOnly `
+        /p:UapAppxPackageBuildMode=StoreUpload `
         /p:GenerateAppInstallerFile=False `
         /p:AppxAutoIncrementPackageRevision=false `
-        /p:AppxPackageSigningEnabled=true `
-        /p:PackageCertificateThumbprint=$($cert.Thumbprint) `
+        /p:AppxPackageSigningEnabled=false `
         /p:AppxPackageDir="$appxOut\"
 
     if ($LASTEXITCODE -ne 0) { throw "msbuild failed with exit code $LASTEXITCODE." }
 
     # --- Stage artifacts --------------------------------------------------
-    $bundle = Get-ChildItem -Path $appxOut -Filter '*.msixbundle' -Recurse | Select-Object -First 1
-    $cer    = Get-ChildItem -Path $appxOut -Filter '*.cer'        -Recurse | Select-Object -First 1
-    if (-not $bundle) { throw "Build finished but no .msixbundle was produced." }
-    if (-not $cer)    { throw "Build finished but no .cer was produced." }
+    $upload = Get-ChildItem -Path $appxOut -Filter '*.msixupload' -Recurse | Select-Object -First 1
+    if (-not $upload) { throw "Build finished but no .msixupload was produced." }
 
     $releaseDir = Join-Path $PSScriptRoot 'release'
     if (-not (Test-Path $releaseDir)) { New-Item -ItemType Directory -Path $releaseDir | Out-Null }
 
-    $bundleName = "MarkdownStudio-$msixVersion-x64-arm64.msixbundle"
-    $cerName    = "MarkdownStudio-$msixVersion.cer"
-    Copy-Item $bundle.FullName (Join-Path $releaseDir $bundleName) -Force
-    Copy-Item $cer.FullName    (Join-Path $releaseDir $cerName)    -Force
+    $uploadName = "MarkdownStudio-$msixVersion-x64-arm64.msixupload"
+    Copy-Item $upload.FullName (Join-Path $releaseDir $uploadName) -Force
 
     Write-Host ""
     Write-Host "Build complete." -ForegroundColor Green
-    Write-Host "Artifacts in: $releaseDir"
-    Write-Host "  - $bundleName"
-    Write-Host "  - $cerName"
+    Write-Host "Artifact: $(Join-Path $releaseDir $uploadName)"
     Write-Host ""
     Write-Host "Next:"
-    Write-Host "  1. git tag $tagName && git push origin $tagName"
-    Write-Host "  2. Open https://github.com/justinswork/MarkdownStudio/releases/new?tag=$tagName"
-    Write-Host "  3. Drag both files in, paste install instructions from docs/RELEASING.md."
+    Write-Host "  1. https://partner.microsoft.com/dashboard/products/9PK8FQXH4JKZ"
+    Write-Host "  2. Packages -> upload $uploadName"
+    Write-Host "  3. Fill out the rest of the submission (description, screenshots,"
+    Write-Host "     age rating, pricing) -> Submit to the Store."
+    Write-Host "  4. Optionally: git tag $tagName && git push origin $tagName"
 }
 finally {
     # Revert the manifest so the local version bump isn't a stray uncommitted
