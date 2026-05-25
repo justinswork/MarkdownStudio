@@ -29,8 +29,12 @@
 
             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
                         Margin="16,0,16,0" Spacing="10">
-                <FontIcon Glyph="&#xE7C3;" FontSize="16"
-                          Foreground="{ThemeResource MdsAccentBrush}" />
+                <!-- Same artwork as the MSIX Square44x44 logo so the in-app
+                     title bar matches the taskbar / Start-menu icon. Size
+                     is fixed in DIPs; WinUI will pick the right scale
+                     automatically when the user changes their display scale. -->
+                <Image Source="ms-appx:///Assets/Square44x44Logo.png"
+                       Width="20" Height="20" VerticalAlignment="Center" />
                 <TextBlock Text="Markdown Studio" VerticalAlignment="Center"
                            FontFamily="{StaticResource MdsUiFontFamily}"
                            FontSize="13" FontWeight="SemiBold"

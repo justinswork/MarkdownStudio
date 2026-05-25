@@ -1,11 +1,9 @@
 <#
 .SYNOPSIS
-  Downloads Monaco editor + markdown-it + preview dependencies and generates
-  placeholder MSIX assets. Run this once after cloning, and again whenever you
-  bump versions in $packages below.
+  Downloads Monaco editor + markdown-it + preview dependencies into
+  MarkdownStudio\Web\. Run this once after cloning, and again whenever
+  you bump versions below.
 #>
-param([switch]$Force, [switch]$SkipAssets)
-
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
@@ -13,9 +11,8 @@ $projectRoot     = Split-Path -Parent $PSCommandPath
 $webRoot         = Join-Path $projectRoot 'MarkdownStudio\Web'
 $editorMonacoDir = Join-Path $webRoot 'editor\monaco'
 $previewLibDir   = Join-Path $webRoot 'preview\lib'
-$assetsDir       = Join-Path $projectRoot 'MarkdownStudio\Assets'
 
-New-Item -ItemType Directory -Force -Path $editorMonacoDir, $previewLibDir, $assetsDir | Out-Null
+New-Item -ItemType Directory -Force -Path $editorMonacoDir, $previewLibDir | Out-Null
 
 $tempDir = Join-Path $env:TEMP "mdstudio-setup-$([Guid]::NewGuid().ToString('N').Substring(0,8))"
 New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
@@ -219,39 +216,10 @@ try {
 
     Write-Host 'Web assets ready.'
 
-    # ---- Placeholder MSIX assets ----
-    if (-not $SkipAssets) {
-        Write-Host 'Generating placeholder MSIX assets...'
-        Add-Type -AssemblyName System.Drawing
-
-        function New-PlaceholderPng {
-            param([string]$Path, [int]$Width, [int]$Height, [string]$Text = 'M')
-            $bmp = New-Object System.Drawing.Bitmap $Width, $Height
-            $gfx = [System.Drawing.Graphics]::FromImage($bmp)
-            $gfx.SmoothingMode    = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-            $gfx.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAlias
-            $bg = [System.Drawing.Color]::FromArgb(31, 111, 235)
-            $gfx.Clear($bg)
-            $fontSize = [Math]::Max([int]($Height * 0.55), 8)
-            $font = New-Object System.Drawing.Font 'Segoe UI', $fontSize, ([System.Drawing.FontStyle]::Bold), ([System.Drawing.GraphicsUnit]::Pixel)
-            $brush = [System.Drawing.Brushes]::White
-            $sf = New-Object System.Drawing.StringFormat
-            $sf.Alignment = [System.Drawing.StringAlignment]::Center
-            $sf.LineAlignment = [System.Drawing.StringAlignment]::Center
-            $rect = New-Object System.Drawing.RectangleF 0, 0, $Width, $Height
-            $gfx.DrawString($Text, $font, $brush, $rect, $sf)
-            $bmp.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
-            $gfx.Dispose(); $bmp.Dispose(); $font.Dispose()
-        }
-
-        New-PlaceholderPng -Path (Join-Path $assetsDir 'StoreLogo.png')         -Width 50  -Height 50
-        New-PlaceholderPng -Path (Join-Path $assetsDir 'Square44x44Logo.png')   -Width 44  -Height 44
-        New-PlaceholderPng -Path (Join-Path $assetsDir 'Square150x150Logo.png') -Width 150 -Height 150
-        New-PlaceholderPng -Path (Join-Path $assetsDir 'Wide310x150Logo.png')   -Width 310 -Height 150 -Text 'Markdown'
-        New-PlaceholderPng -Path (Join-Path $assetsDir 'SplashScreen.png')      -Width 620 -Height 300 -Text 'Markdown Studio'
-        New-PlaceholderPng -Path (Join-Path $assetsDir 'LockScreenLogo.png')    -Width 24  -Height 24
-        Write-Host 'Assets generated.'
-    }
+    # MSIX icon assets under MarkdownStudio/Assets/ are real artwork
+    # committed to the repo. setup-web.ps1 used to generate placeholders
+    # here; it doesn't anymore — running this script no longer clobbers
+    # the icons if they've been replaced.
 
     Write-Host 'Done.'
 } finally {
