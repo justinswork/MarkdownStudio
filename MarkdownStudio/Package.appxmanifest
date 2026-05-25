@@ -16,7 +16,7 @@
     Version="0.1.0.0" />
 
   <Properties>
-    <DisplayName>Markdown Studio</DisplayName>
+    <DisplayName>MarkdownStudio</DisplayName>
     <PublisherDisplayName>Justin King</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -35,7 +35,7 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="Markdown Studio"
+        DisplayName="MarkdownStudio"
         Description="A native Windows editor for Markdown files."
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
