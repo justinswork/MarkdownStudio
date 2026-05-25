@@ -73,8 +73,16 @@ if ($stampedManifest -eq $originalManifest) {
 
 try {
     # --- Clean previous build output --------------------------------------
+    # We wipe bin/ and obj/ alongside appxout/ because MSBuild's incremental
+    # build will happily reuse a cached AppxManifest.xml from a prior run
+    # (Partner Center caught this once: the on-disk manifest was correct
+    # but the .msixupload still carried the stale display name).
     $appxOut = Join-Path $PSScriptRoot 'appxout'
-    if (Test-Path $appxOut) { Remove-Item -Recurse -Force $appxOut }
+    $binDir  = Join-Path $PSScriptRoot 'MarkdownStudio\bin'
+    $objDir  = Join-Path $PSScriptRoot 'MarkdownStudio\obj'
+    foreach ($d in @($appxOut, $binDir, $objDir)) {
+        if (Test-Path $d) { Remove-Item -Recurse -Force $d }
+    }
 
     # --- Build the bundle --------------------------------------------------
     # AppxBundle=Always + AppxBundlePlatforms="x64|ARM64" merges both
