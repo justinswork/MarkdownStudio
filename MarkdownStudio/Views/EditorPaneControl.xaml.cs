@@ -210,6 +210,16 @@ public sealed partial class EditorPaneControl : UserControl
                     var xrayText  = root.GetProperty("text").GetString() ?? string.Empty;
                     _ = ApplyXrayEditAsync(xrayStart, xrayEnd, xrayText);
                     break;
+                case "save":
+                    // Ctrl+S while the preview pane has focus. preview.js
+                    // intercepts the keydown before WebView2's underlying
+                    // Edge runtime can swallow it as "Save Page" and forwards
+                    // the intent here, same contract as the editor pane.
+                    SaveRequested?.Invoke();
+                    break;
+                case "saveAs":
+                    SaveAsRequested?.Invoke();
+                    break;
             }
         }
         catch (Exception ex)

@@ -772,13 +772,24 @@
     },
   };
 
-  // Forward F11 to the host so distraction-free mode toggles even when the
-  // preview WebView2 has focus.
+  // Forward host shortcuts that WebView2's underlying Edge runtime would
+  // otherwise consume before they reach the WinUI accelerator. F11 is
+  // Edge's fullscreen accelerator and Ctrl+S is its "Save Page" — without
+  // intercepting them here, neither toggle-focus nor save fires when the
+  // preview pane has focus. We don't touch Ctrl+E / Esc / Ctrl+Enter:
+  // those go through chordMatches() and the x-ray flow.
   window.addEventListener('keydown', function (e) {
     if (e.key === 'F11') {
       e.preventDefault();
       e.stopPropagation();
       postToHost({ type: 'toggleFocus' });
+      return;
+    }
+    var key = (e.key || '').toLowerCase();
+    if (key === 's' && (e.ctrlKey || e.metaKey) && !e.altKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      postToHost({ type: e.shiftKey ? 'saveAs' : 'save' });
     }
   }, true);
 
