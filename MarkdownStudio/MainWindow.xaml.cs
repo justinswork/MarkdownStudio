@@ -385,6 +385,12 @@ public sealed partial class MainWindow : Window
         // "Save Page" accelerator; the editor posts them up to here.
         pane.SaveRequested   += () => DispatcherQueue.TryEnqueue(() => _ = SaveCurrentAsync(false));
         pane.SaveAsRequested += () => DispatcherQueue.TryEnqueue(() => _ = SaveCurrentAsync(true));
+        // Pasting an image into an Untitled tab: the pane awaits this hook to
+        // get the doc saved (so it knows where to write the .png alongside)
+        // before the image bytes are written.
+        pane.PasteImageNeedsSaveAsync = d => PromptSaveForPastedImageAsync(d, pane);
+        pane.ImagePasted += relPath => DispatcherQueue.TryEnqueue(() =>
+            StatusText.Text = $"Inserted {relPath}");
 
         var tab = new TabViewItem
         {
@@ -749,6 +755,28 @@ public sealed partial class MainWindow : Window
         Tabs.TabItems.Remove(item);
         if (Tabs.TabItems.Count == 0) ShowWelcomeTab();
         return true;
+    }
+
+    // Pasted image into an Untitled doc: explain that the doc needs a home on
+    // disk first (so we can place the image next to it), then drive Save-As.
+    // Returns true if the document now has a FilePath.
+    private async Task<bool> PromptSaveForPastedImageAsync(DocumentTab doc, EditorPaneControl pane)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Save document first",
+            Content = "Pasted images are stored alongside the markdown file. " +
+                      "Save this document first to insert the image.",
+            PrimaryButtonText = "Save As...",
+            CloseButtonText   = "Cancel",
+            DefaultButton     = ContentDialogButton.Primary,
+            XamlRoot          = RootGrid.XamlRoot,
+        };
+        ContentDialogResult res;
+        try { res = await dialog.ShowAsync(); }
+        catch { return false; }
+        if (res != ContentDialogResult.Primary) return false;
+        return await SaveDocumentAsync(doc, pane, saveAs: true);
     }
 
     private async Task<SavePromptResult> PromptSaveAsync(DocumentTab doc)

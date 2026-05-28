@@ -52,6 +52,13 @@ public sealed partial class EditorPaneControl : UserControl
     public event Action?         FocusToggleRequested;
     public event Action?         SaveRequested;
     public event Action?         SaveAsRequested;
+    public event Action<string>? ImagePasted;
+
+    // Invoked when the user pastes an image into a document that hasn't been
+    // saved yet — the host is asked to drive the Save-As flow so we can place
+    // the image alongside the .md on disk. Returns true if the document now
+    // has a FilePath (save succeeded), false if the user cancelled.
+    public Func<DocumentTab, Task<bool>>? PasteImageNeedsSaveAsync { get; set; }
 
     public EditorPaneControl()
     {
@@ -170,6 +177,16 @@ public sealed partial class EditorPaneControl : UserControl
                 case "saveAs":
                     SaveAsRequested?.Invoke();
                     break;
+                case "pasteImage":
+                    var pasteId = root.GetProperty("pasteId").GetString() ?? string.Empty;
+                    var mime    = root.GetProperty("mime").GetString() ?? "image/png";
+                    var b64     = root.GetProperty("base64").GetString() ?? string.Empty;
+                    string? originalName = null;
+                    if (root.TryGetProperty("originalName", out var onProp) &&
+                        onProp.ValueKind == JsonValueKind.String)
+                        originalName = onProp.GetString();
+                    _ = HandlePasteImageAsync(pasteId, mime, b64, originalName);
+                    break;
             }
         }
         catch (Exception ex)
@@ -235,6 +252,118 @@ public sealed partial class EditorPaneControl : UserControl
         var encoded = JsonSerializer.Serialize(newText);
         await EditorView.CoreWebView2.ExecuteScriptAsync(
             $"window.host.replaceLines({startLine}, {endLine}, {encoded});");
+    }
+
+    private async Task HandlePasteImageAsync(
+        string pasteId, string mime, string base64, string? originalName)
+    {
+        try
+        {
+            var doc = Document;
+            if (doc == null || string.IsNullOrEmpty(base64))
+            {
+                await CancelImagePasteAsync(pasteId);
+                return;
+            }
+
+            // Image lives next to the .md file, so the doc must be saved first.
+            // Pasting into an Untitled tab bubbles up to the host to drive the
+            // Save-As picker; if the user cancels, we drop the paste silently.
+            if (string.IsNullOrEmpty(doc.FilePath))
+            {
+                var saved = PasteImageNeedsSaveAsync != null &&
+                            await PasteImageNeedsSaveAsync(doc);
+                if (!saved || string.IsNullOrEmpty(doc.FilePath))
+                {
+                    await CancelImagePasteAsync(pasteId);
+                    return;
+                }
+            }
+
+            byte[] bytes;
+            try { bytes = Convert.FromBase64String(base64); }
+            catch
+            {
+                await CancelImagePasteAsync(pasteId);
+                return;
+            }
+
+            var docDir    = Path.GetDirectoryName(doc.FilePath!) ?? string.Empty;
+            var imagesDir = Path.Combine(docDir, "images");
+            Directory.CreateDirectory(imagesDir);
+
+            var fileName  = BuildImageFileName(originalName, mime);
+            var finalPath = MakeUniquePath(Path.Combine(imagesDir, fileName));
+            await File.WriteAllBytesAsync(finalPath, bytes);
+
+            var finalName    = Path.GetFileName(finalPath);
+            var relativePath = "images/" + finalName;
+
+            await _editorReady.Task;
+            await EditorView.CoreWebView2.ExecuteScriptAsync(
+                $"window.host.insertImage({JsonSerializer.Serialize(pasteId)}, " +
+                $"{JsonSerializer.Serialize(relativePath)}, " +
+                $"{JsonSerializer.Serialize(string.Empty)});");
+
+            ImagePasted?.Invoke(relativePath);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Paste image error: {ex}");
+            await CancelImagePasteAsync(pasteId);
+        }
+    }
+
+    private Task CancelImagePasteAsync(string pasteId)
+    {
+        if (EditorView.CoreWebView2 == null) return Task.CompletedTask;
+        return EditorView.CoreWebView2.ExecuteScriptAsync(
+            $"window.host.cancelImagePaste({JsonSerializer.Serialize(pasteId)});").AsTask();
+    }
+
+    private static string BuildImageFileName(string? originalName, string mime)
+    {
+        if (!string.IsNullOrWhiteSpace(originalName))
+        {
+            var safe = SanitizeFileName(originalName);
+            if (!string.IsNullOrEmpty(safe)) return safe;
+        }
+        var ext = MimeToExtension(mime);
+        return $"image-{DateTime.Now:yyyyMMdd-HHmmss}{ext}";
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var cleaned = new string(Array.FindAll(name.ToCharArray(), c => Array.IndexOf(invalid, c) < 0));
+        return cleaned.Trim();
+    }
+
+    private static string MimeToExtension(string mime) => mime.ToLowerInvariant() switch
+    {
+        "image/png"  => ".png",
+        "image/jpeg" => ".jpg",
+        "image/jpg"  => ".jpg",
+        "image/gif"  => ".gif",
+        "image/bmp"  => ".bmp",
+        "image/webp" => ".webp",
+        "image/svg+xml" => ".svg",
+        _ => ".png",
+    };
+
+    private static string MakeUniquePath(string path)
+    {
+        if (!File.Exists(path)) return path;
+        var dir  = Path.GetDirectoryName(path) ?? string.Empty;
+        var stem = Path.GetFileNameWithoutExtension(path);
+        var ext  = Path.GetExtension(path);
+        for (int i = 1; i < 10_000; i++)
+        {
+            var candidate = Path.Combine(dir, $"{stem}-{i}{ext}");
+            if (!File.Exists(candidate)) return candidate;
+        }
+        // Pathological fallback — append a guid suffix.
+        return Path.Combine(dir, $"{stem}-{Guid.NewGuid():N}{ext}");
     }
 
     private static readonly HashSet<string> _allowedContextMenuItems =

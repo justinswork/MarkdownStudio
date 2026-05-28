@@ -311,6 +311,100 @@
       }
     }, true);
 
+    // ---- Image paste ----
+    //
+    // When the user pastes an image (raw bitmap from screenshot tools, or a
+    // copied image file from Explorer) into the editor, capture it before
+    // Monaco's text-paste pipeline sees it, ship the bytes to the host, and
+    // let the host write the file under <doc-dir>/images/. The host then
+    // calls back into window.host.insertImage with the relative path and we
+    // splice the markdown `![alt](path)` into the editor at the location
+    // where the paste happened.
+
+    var pendingPastes = Object.create(null);
+
+    function newPasteId() {
+      return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    }
+
+    // file.name is set to "image.png" by Chromium for synthetic File objects
+    // produced from a raw clipboard bitmap. Treat that as "no real name" so
+    // the host can use a timestamp-based filename instead of producing
+    // image.png, image-1.png, image-2.png... across a session.
+    function looksLikeSyntheticName(name) {
+      return !name || /^image\.(png|jpe?g|gif|bmp|webp)$/i.test(name);
+    }
+
+    window.addEventListener('paste', function (e) {
+      var data = e.clipboardData;
+      if (!data || !data.items) return;
+      for (var i = 0; i < data.items.length; i++) {
+        var item = data.items[i];
+        if (item.kind === 'file' && /^image\//i.test(item.type)) {
+          var file = item.getAsFile();
+          if (!file) continue;
+          e.preventDefault();
+          e.stopPropagation();
+          handleImagePaste(file);
+          return;
+        }
+      }
+    }, true);
+
+    function handleImagePaste(file) {
+      var pasteId = newPasteId();
+      var selection = editor.getSelection();
+      // Stash the selection so we can insert at the right place even if the
+      // user moves the cursor while the host is writing the file / showing
+      // the "save first" prompt.
+      pendingPastes[pasteId] = selection;
+
+      var reader = new FileReader();
+      reader.onerror = function () {
+        delete pendingPastes[pasteId];
+        console.error('FileReader failed for pasted image');
+      };
+      reader.onload = function () {
+        var result = reader.result || '';
+        var comma  = result.indexOf(',');
+        var base64 = comma >= 0 ? result.slice(comma + 1) : '';
+        if (!base64) {
+          delete pendingPastes[pasteId];
+          return;
+        }
+        postToHost({
+          type:         'pasteImage',
+          pasteId:      pasteId,
+          mime:         file.type || 'image/png',
+          originalName: looksLikeSyntheticName(file.name) ? null : file.name,
+          base64:       base64,
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    window.host.insertImage = function (pasteId, relativePath, altText) {
+      var sel = pendingPastes[pasteId];
+      delete pendingPastes[pasteId];
+      if (!sel) return;
+      // Markdown URLs with spaces need to be either wrapped in <> or
+      // percent-encoded. Percent-encoding only the space is enough for
+      // markdown-it and is friendlier to copy/paste.
+      var safePath = String(relativePath).replace(/ /g, '%20');
+      var alt = altText == null ? '' : String(altText);
+      var markdown = '![' + alt + '](' + safePath + ')';
+      editor.executeEdits('mds-paste-image', [{
+        range: sel,
+        text: markdown,
+        forceMoveMarkers: true,
+      }]);
+      editor.focus();
+    };
+
+    window.host.cancelImagePaste = function (pasteId) {
+      delete pendingPastes[pasteId];
+    };
+
     postToHost({ type: 'ready' });
     editor.focus();
   });
