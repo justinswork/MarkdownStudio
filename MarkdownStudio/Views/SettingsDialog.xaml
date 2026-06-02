@@ -16,6 +16,11 @@
     <ContentDialog.Resources>
         <x:Double x:Key="ContentDialogMaxWidth">1200</x:Double>
         <x:Double x:Key="ContentDialogMinWidth">900</x:Double>
+        <!-- Default ContentDialog wraps its content in ~24px of padding, which
+             pushed our content (and the X close button) well away from the
+             dialog edges. Zero it so our own Grid controls all spacing and the
+             close button can sit in the corner. -->
+        <Thickness x:Key="ContentDialogPadding">0</Thickness>
         <StaticResource x:Key="ContentDialogBackground"  ResourceKey="MdsWindowBrush" />
         <StaticResource x:Key="ContentDialogBorderBrush" ResourceKey="MdsBorderBrush" />
         <StaticResource x:Key="ContentDialogForeground"  ResourceKey="MdsTextPrimaryBrush" />
@@ -40,8 +45,12 @@
                         ResourceKey="MdsTextPrimaryBrush" />
     </ContentDialog.Resources>
 
+    <!-- KeyboardAcceleratorPlacementMode=Hidden suppresses the automatic
+         "Esc" accelerator tooltip that WinUI otherwise pops up when hovering
+         anywhere over this Grid (same as the main window's RootGrid). -->
     <Grid Width="1080" Height="640"
-          Background="{ThemeResource MdsWindowBrush}">
+          Background="{ThemeResource MdsWindowBrush}"
+          KeyboardAcceleratorPlacementMode="Hidden">
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Key="Escape" Invoked="OnEscape" />
         </Grid.KeyboardAccelerators>
@@ -50,8 +59,8 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Custom header: title on the left, X close button on the right -->
-        <Grid Grid.Row="0" Padding="20,12,12,8" ColumnSpacing="8">
+        <!-- Custom header: title on the left, X close button in the corner -->
+        <Grid Grid.Row="0" Padding="20,8,6,6" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -64,6 +73,7 @@
             <Button Grid.Column="1" Click="OnCloseClicked"
                     Style="{StaticResource MdsGhostButtonStyle}"
                     Width="36" Height="36"
+                    VerticalAlignment="Top"
                     ToolTipService.ToolTip="Close (Esc)">
                 <FontIcon Glyph="&#xE8BB;" FontSize="12" />
             </Button>
