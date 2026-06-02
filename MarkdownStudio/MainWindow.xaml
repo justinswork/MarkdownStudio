@@ -152,7 +152,17 @@
                 <TextBlock x:Name="StatusText" Style="{StaticResource MdsCaptionStyle}" Text="Ready" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="14" Margin="0,0,14,0" VerticalAlignment="Center">
-                <TextBlock x:Name="ThemeStatusText" Style="{StaticResource MdsCaptionStyle}" Text="Daylight" />
+                <!-- Clicking the theme name jumps straight to the theme tab in
+                     Settings. Styled to read like the surrounding caption text
+                     but with a subtle hover affordance. -->
+                <Button x:Name="ThemeStatusButton" Click="OnThemeStatusClicked"
+                        Content="Daylight"
+                        Background="Transparent" BorderThickness="0"
+                        Padding="6,1" MinWidth="0" MinHeight="0" CornerRadius="4"
+                        VerticalAlignment="Center"
+                        Foreground="{ThemeResource MdsTextSecondaryBrush}"
+                        FontFamily="{StaticResource MdsUiFontFamilyText}" FontSize="12"
+                        ToolTipService.ToolTip="Change theme" />
                 <TextBlock Style="{StaticResource MdsCaptionStyle}" Text="·" />
                 <TextBlock x:Name="DocInfoText" Style="{StaticResource MdsCaptionStyle}" Text="Markdown · UTF-8" />
             </StackPanel>

@@ -7,6 +7,9 @@ using Microsoft.UI.Xaml.Input;
 
 namespace MarkdownStudio.Views;
 
+// Tabs in the settings dialog, in the order they appear in the TabView.
+public enum SettingsTab { Theme = 0, Editor = 1, Preview = 2, Shortcuts = 3 }
+
 // ContentDialog with tabs for General (theme), Editor, and Preview settings.
 // MainWindow constructs it, calls Attach* on the inner panes with the right
 // services, and ShowAsync()'s it.
@@ -18,6 +21,8 @@ public sealed partial class SettingsDialog : ContentDialog
     {
         InitializeComponent();
     }
+
+    public void SelectTab(SettingsTab tab) => Tabs.SelectedIndex = (int)tab;
 
     public ThemePickerView         ThemePicker     => GeneralPane;
     public SettingsView            EditorSettings  => EditorPane;

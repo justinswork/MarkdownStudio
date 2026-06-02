@@ -173,7 +173,10 @@ public sealed partial class MainWindow : Window
         ModeControl.ModeChanged += OnModeChanged;
     }
 
-    private async Task ShowSettingsDialogAsync()
+    private void OnThemeStatusClicked(object sender, RoutedEventArgs e) =>
+        _ = ShowSettingsDialogAsync(SettingsTab.Theme);
+
+    private async Task ShowSettingsDialogAsync(SettingsTab tab = SettingsTab.Theme)
     {
         // ContentDialog hosts in its own popup root which doesn't inherit the
         // window's RequestedTheme automatically — set it explicitly so the
@@ -201,6 +204,7 @@ public sealed partial class MainWindow : Window
         // Settings dialog uses Sample.md content in both tabs' preview area.
         await dlg.EditorSettings.LoadSampleAsync();
         await dlg.PreviewSettings.LoadSampleAsync();
+        dlg.SelectTab(tab);
         await dlg.ShowAsync();
     }
 
@@ -251,7 +255,7 @@ public sealed partial class MainWindow : Window
 
         ApplyCaptionButtonColors(effective);
 
-        ThemeStatusText.Text = theme.DisplayName;
+        ThemeStatusButton.Content = theme.DisplayName;
 
         var monaco  = _appTheme.EffectiveMonacoTheme;
         var preview = _appTheme.EffectivePreviewClass;
