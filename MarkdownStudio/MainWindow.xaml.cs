@@ -240,6 +240,15 @@ public sealed partial class MainWindow : Window
         }
         catch { /* unsupported on some hardware */ }
 
+        // The title bar row is normally transparent so Mica shows through it.
+        // For non-Mica themes (Sepia, Solarized) there's no backdrop, so the
+        // window's bare white base bled through — making the title bar white
+        // with near-white text on Solarized Dark. Give it a solid theme fill
+        // when Mica is off so the whole title bar follows the theme.
+        AppTitleBar.Background = effective.UseMica
+            ? new SolidColorBrush(Microsoft.UI.Colors.Transparent)
+            : new SolidColorBrush(effective.WindowFill);
+
         ApplyCaptionButtonColors(effective);
 
         ThemeStatusText.Text = theme.DisplayName;
