@@ -17,9 +17,9 @@ Most of the time you'll type on the left and watch on the right. But when you sp
 
 Inline math with KaTeX: $E = mc^2$, and display math:
 
-$$
+$$$
 \sum_{k=0}^{n} \binom{n}{k} = 2^n
-$$
+$$$
 
 ### Syntax-highlighted code
 
