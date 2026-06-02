@@ -564,7 +564,7 @@ public sealed partial class MainWindow : Window
         RailColumn.Width    = _focusMode ? new GridLength(0) : GridLength.Auto;
         SidebarColumn.Width = _focusMode ? new GridLength(0) : GridLength.Auto;
         SidebarHost.Visibility = _focusMode ? Visibility.Collapsed : SidebarHost.Visibility;
-        TopToolbar.Visibility = hidden;
+        TabBarTools.Visibility = hidden;
         Tabs.Visibility = hidden;
         StatusBar.Visibility = hidden;
     }
@@ -866,12 +866,12 @@ public sealed partial class MainWindow : Window
             {
                 ActiveContent.Content = _welcomeView;
                 DocInfoText.Text = "Welcome";
-                TopToolbar.Visibility = Visibility.Collapsed;
+                TabBarTools.Visibility = Visibility.Collapsed;
                 _outlineView.SetNodes(Array.Empty<OutlineNode>());
                 return;
             }
 
-            if (!_focusMode) TopToolbar.Visibility = Visibility.Visible;
+            if (!_focusMode) TabBarTools.Visibility = Visibility.Visible;
 
             if (_panes.TryGetValue(item, out var pane))
             {

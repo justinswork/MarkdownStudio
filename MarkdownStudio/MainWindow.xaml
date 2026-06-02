@@ -101,41 +101,41 @@
             <Grid Grid.Column="2" Background="{ThemeResource MdsWindowBrush}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="0" Padding="12,8" x:Name="TopToolbar">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                        <views:ModeSegmentedControl x:Name="ModeControl" />
-                        <Button x:Name="FindButton" Click="OnFindInDocument"
-                                Style="{StaticResource MdsGhostButtonStyle}"
-                                ToolTipService.ToolTip="Find in document (Ctrl+F)">
-                            <FontIcon Glyph="&#xE721;" FontSize="14" />
-                        </Button>
-                        <Button x:Name="FocusButton" Click="OnToggleFocus"
-                                Style="{StaticResource MdsGhostButtonStyle}"
-                                ToolTipService.ToolTip="Distraction-free mode (F11)">
-                            <FontIcon Glyph="&#xE740;" FontSize="14" />
-                        </Button>
-                    </StackPanel>
-                </Grid>
-
-                <muxc:TabView x:Name="Tabs" Grid.Row="1"
+                <!-- The mode / find / focus controls live in the tab strip's
+                     footer so they share the tab row. That keeps the top of
+                     the page a fixed height whether or not a document is
+                     open — only the controls' visibility toggles. -->
+                <muxc:TabView x:Name="Tabs" Grid.Row="0"
                               TabWidthMode="SizeToContent"
                               CanReorderTabs="True"
                               CanDragTabs="True"
                               IsAddTabButtonVisible="True"
                               TabCloseRequested="Tabs_TabCloseRequested"
                               AddTabButtonClick="Tabs_AddTabButtonClick"
-                              SelectionChanged="Tabs_SelectionChanged" />
+                              SelectionChanged="Tabs_SelectionChanged">
+                    <muxc:TabView.TabStripFooter>
+                        <StackPanel x:Name="TabBarTools" Orientation="Horizontal"
+                                    Spacing="6" HorizontalAlignment="Right"
+                                    VerticalAlignment="Center" Padding="8,0,12,0">
+                            <views:ModeSegmentedControl x:Name="ModeControl" />
+                            <Button x:Name="FindButton" Click="OnFindInDocument"
+                                    Style="{StaticResource MdsGhostButtonStyle}"
+                                    ToolTipService.ToolTip="Find in document (Ctrl+F)">
+                                <FontIcon Glyph="&#xE721;" FontSize="14" />
+                            </Button>
+                            <Button x:Name="FocusButton" Click="OnToggleFocus"
+                                    Style="{StaticResource MdsGhostButtonStyle}"
+                                    ToolTipService.ToolTip="Distraction-free mode (F11)">
+                                <FontIcon Glyph="&#xE740;" FontSize="14" />
+                            </Button>
+                        </StackPanel>
+                    </muxc:TabView.TabStripFooter>
+                </muxc:TabView>
 
-                <ContentPresenter x:Name="ActiveContent" Grid.Row="2"
+                <ContentPresenter x:Name="ActiveContent" Grid.Row="1"
                                   HorizontalContentAlignment="Stretch"
                                   VerticalContentAlignment="Stretch" />
             </Grid>
