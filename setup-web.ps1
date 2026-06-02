@@ -107,8 +107,12 @@ try {
         # 2.0.3 doesn't actually ship a dist build; bundle a tiny shim manually
         $idx = Join-Path $katexMdPkg 'index.js'
         Copy-Item -Force -Path $idx -Destination (Join-Path $previewLibDir 'markdown-it-katex-src.js')
-        # Build a minimal UMD wrapper around index.js requires
-        $wrapper = @"
+        # Build a minimal UMD wrapper around index.js requires.
+        # NOTE: single-quoted here-string (@'...'@) is required — a
+        # double-quoted one expands "$$" as PowerShell's $$ automatic
+        # variable, silently emptying every "$$" delimiter literal below and
+        # breaking block-math ($$ ... $$) detection in the generated file.
+        $wrapper = @'
 ;(function (global) {
   if (!global.katex) { console.warn('katex not loaded'); return; }
   // Minimal port of markdown-it-katex 2.0.3 (Apache-2.0)
@@ -129,7 +133,7 @@ try {
     match = start;
     while ((match = state.src.indexOf('$', match)) !== -1) {
       pos = match - 1;
-      while (state.src[pos] === '\\\\') pos -= 1;
+      while (state.src[pos] === '\\') pos -= 1;
       if (((match - pos) % 2) == 1) break;
       match += 1;
     }
@@ -195,7 +199,7 @@ try {
     md.renderer.rules.math_block  = function (tokens, idx) { return renderBlock(tokens[idx].content);  };
   };
 })(typeof window !== 'undefined' ? window : globalThis);
-"@
+'@
         Set-Content -Path (Join-Path $previewLibDir 'markdown-it-katex.min.js') -Value $wrapper -Encoding utf8
     } else {
         Copy-Item -Force -Path $katexMdJs -Destination (Join-Path $previewLibDir 'markdown-it-katex.min.js')
