@@ -79,11 +79,25 @@ body.headings-display h2 {
 body.headings-display h3 { font-size: 1.4em; font-weight: 700; margin-top: 1.2em; }
 body.headings-display h4 { font-size: 1.15em; font-weight: 700; }
 
-/* ----- Daylight ----- */
+/* ----- Daylight -----
+   The per-theme blocks also redefine github-markdown.css's color variables.
+   Those are normally set by @media (prefers-color-scheme), which follows the
+   OS, not our in-app theme — so tables, cell borders, header fills, and other
+   "chrome" stayed on the light defaults regardless of the chosen theme.
+   Pinning them on body.theme-X (higher specificity, no media gate) makes all
+   of that follow the active theme. */
 body.theme-daylight {
   background: #FCFCFC;
   color: #14161C;
   color-scheme: light;
+  --bgColor-default: #FCFCFC;
+  --bgColor-muted: #F7F7F8;
+  --bgColor-neutral-muted: #818b981f;
+  --borderColor-default: #E4E4E8;
+  --borderColor-muted: #E4E4E8b3;
+  --fgColor-default: #14161C;
+  --fgColor-muted: #6E727C;
+  --fgColor-accent: #007ACC;
 }
 body.theme-daylight .markdown-body code,
 body.theme-daylight .markdown-body pre   { background-color: #F4F4F6; }
@@ -98,6 +112,14 @@ body.theme-midnight {
   background: #14161C;
   color: #E8E8EC;
   color-scheme: dark;
+  --bgColor-default: #14161C;
+  --bgColor-muted: #1A1D26;
+  --bgColor-neutral-muted: #818b9826;
+  --borderColor-default: #2D303A;
+  --borderColor-muted: #2D303Ab3;
+  --fgColor-default: #E8E8EC;
+  --fgColor-muted: #969AA4;
+  --fgColor-accent: #569CD6;
 }
 body.theme-midnight .markdown-body code,
 body.theme-midnight .markdown-body pre   { background-color: #1E212B; }
@@ -114,6 +136,14 @@ body.theme-sepia {
   background: #FCF6E8;
   color: #40231F;
   color-scheme: light;
+  --bgColor-default: #FCF6E8;
+  --bgColor-muted: #F2EAD2;
+  --bgColor-neutral-muted: #78664E1f;
+  --borderColor-default: #DACFB8;
+  --borderColor-muted: #DACFB8b3;
+  --fgColor-default: #40231F;
+  --fgColor-muted: #78664E;
+  --fgColor-accent: #A56623;
 }
 body.theme-sepia .markdown-body code,
 body.theme-sepia .markdown-body pre   { background-color: #F2EAD2; }
@@ -128,6 +158,14 @@ body.theme-solarized-light {
   background: #FDF6E3;
   color: #586E75;
   color-scheme: light;
+  --bgColor-default: #FDF6E3;
+  --bgColor-muted: #EEE8D5;
+  --bgColor-neutral-muted: #93A1A11f;
+  --borderColor-default: #D5CFBC;
+  --borderColor-muted: #D5CFBCb3;
+  --fgColor-default: #586E75;
+  --fgColor-muted: #93A1A1;
+  --fgColor-accent: #268BD2;
 }
 body.theme-solarized-light .markdown-body code,
 body.theme-solarized-light .markdown-body pre   { background-color: #EEE8D5; }
@@ -142,6 +180,14 @@ body.theme-solarized-dark {
   background: #002B36;
   color: #EEE8D5;
   color-scheme: dark;
+  --bgColor-default: #002B36;
+  --bgColor-muted: #073642;
+  --bgColor-neutral-muted: #93A1A126;
+  --borderColor-default: #14546A;
+  --borderColor-muted: #14546Ab3;
+  --fgColor-default: #EEE8D5;
+  --fgColor-muted: #93A1A1;
+  --fgColor-accent: #268BD2;
 }
 body.theme-solarized-dark .markdown-body code,
 body.theme-solarized-dark .markdown-body pre   { background-color: #073642; }

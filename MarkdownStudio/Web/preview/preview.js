@@ -185,14 +185,58 @@
     });
   }
 
+  // Mermaid renders its own SVG, so the page theme class can't reach inside
+  // it. Drive Mermaid's 'base' theme with variables that match each app theme
+  // (diagram canvas, node fill/border, edges, text) so diagrams blend in.
+  var MERMAID_VARS = {
+    'theme-daylight':        { dark: false, bg: '#FCFCFC', surface: '#F1F1F4', text: '#14161C', border: '#C7CBD4', line: '#6E727C' },
+    'theme-midnight':        { dark: true,  bg: '#14161C', surface: '#222633', text: '#E8E8EC', border: '#3A3F4C', line: '#969AA4' },
+    'theme-sepia':           { dark: false, bg: '#FCF6E8', surface: '#EFE4C8', text: '#40231F', border: '#C8B997', line: '#78664E' },
+    'theme-solarized-light': { dark: false, bg: '#FDF6E3', surface: '#EAE3CC', text: '#586E75', border: '#CBC4AC', line: '#93A1A1' },
+    'theme-solarized-dark':  { dark: true,  bg: '#002B36', surface: '#0A3D4A', text: '#EEE8D5', border: '#1C5468', line: '#93A1A1' }
+  };
+
+  function mermaidConfig(cls) {
+    var v = MERMAID_VARS[cls] || MERMAID_VARS['theme-daylight'];
+    return {
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme: 'base',
+      themeVariables: {
+        darkMode: v.dark,
+        background: v.bg,
+        primaryColor: v.surface,
+        secondaryColor: v.surface,
+        tertiaryColor: v.bg,
+        mainBkg: v.surface,
+        primaryTextColor: v.text,
+        secondaryTextColor: v.text,
+        tertiaryTextColor: v.text,
+        textColor: v.text,
+        titleColor: v.text,
+        nodeTextColor: v.text,
+        primaryBorderColor: v.border,
+        nodeBorder: v.border,
+        clusterBkg: v.bg,
+        clusterBorder: v.border,
+        lineColor: v.line,
+        edgeLabelBackground: v.bg
+      }
+    };
+  }
+
   function setTheme(name) {
     var cls = KNOWN_THEMES.indexOf(name) >= 0 ? name : 'theme-daylight';
+    var changed = !document.body.classList.contains(cls);
     KNOWN_THEMES.forEach(function (t) { document.body.classList.remove(t); });
     document.body.classList.add(cls);
-    var isDark = (cls === 'theme-midnight' || cls === 'theme-solarized-dark');
     if (window.mermaid && window.mermaid.initialize) {
-      window.mermaid.initialize({ startOnLoad: false, theme: isDark ? 'dark' : 'default', securityLevel: 'strict' });
+      window.mermaid.initialize(mermaidConfig(cls));
     }
+    // Mermaid bakes theme colors into the already-rendered SVG, so re-render
+    // the document to re-theme any diagrams. CSS-driven elements (tables,
+    // code, borders) re-skin automatically from the body theme class.
+    if (changed && currentSource) { render(currentSource); }
   }
 
   setTheme(getThemeFromQuery());
