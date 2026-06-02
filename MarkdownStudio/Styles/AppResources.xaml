@@ -14,6 +14,9 @@
     <SolidColorBrush x:Key="MdsAccentBrush"         Color="#007ACC" />
     <SolidColorBrush x:Key="MdsAccentSoftBrush"     Color="#1F007ACC" />
     <SolidColorBrush x:Key="MdsAccentHoverBrush"    Color="#330078D4" />
+    <!-- Text/glyphs drawn on top of an accent fill (selected toggles). White
+         reads well on every theme's accent, so this one isn't theme-recolored. -->
+    <SolidColorBrush x:Key="MdsOnAccentBrush"       Color="White" />
 
     <!-- TabView chrome — the selected tab and the strip behind the tabs use
          their own framework brushes that default to a light grey regardless
@@ -29,6 +32,21 @@
     <StaticResource x:Key="TabViewItemHeaderForegroundSelected"             ResourceKey="MdsTextPrimaryBrush" />
     <StaticResource x:Key="TabViewItemHeaderForegroundSelectedPointerOver"  ResourceKey="MdsTextPrimaryBrush" />
     <StaticResource x:Key="TabViewItemHeaderForegroundSelectedPressed"      ResourceKey="MdsTextPrimaryBrush" />
+
+    <!-- ToggleButton checked chrome — the framework defaults to the system
+         accent (blue) for the selected state, so the mode segmented control
+         and the activity-rail toggles stayed blue on Sepia / Solarized. Alias
+         them to the theme accent (which ApplyTheme recolors live) with white
+         on top so selected toggles follow the active theme. -->
+    <StaticResource x:Key="ToggleButtonBackgroundChecked"             ResourceKey="MdsAccentBrush" />
+    <StaticResource x:Key="ToggleButtonBackgroundCheckedPointerOver"  ResourceKey="MdsAccentBrush" />
+    <StaticResource x:Key="ToggleButtonBackgroundCheckedPressed"      ResourceKey="MdsAccentBrush" />
+    <StaticResource x:Key="ToggleButtonForegroundChecked"             ResourceKey="MdsOnAccentBrush" />
+    <StaticResource x:Key="ToggleButtonForegroundCheckedPointerOver"  ResourceKey="MdsOnAccentBrush" />
+    <StaticResource x:Key="ToggleButtonForegroundCheckedPressed"      ResourceKey="MdsOnAccentBrush" />
+    <StaticResource x:Key="ToggleButtonBorderBrushChecked"            ResourceKey="MdsAccentBrush" />
+    <StaticResource x:Key="ToggleButtonBorderBrushCheckedPointerOver" ResourceKey="MdsAccentBrush" />
+    <StaticResource x:Key="ToggleButtonBorderBrushCheckedPressed"     ResourceKey="MdsAccentBrush" />
 
     <!-- Typography -->
     <FontFamily x:Key="MdsUiFontFamily">Segoe UI Variable Display, Segoe UI Variable, Segoe UI, sans-serif</FontFamily>
