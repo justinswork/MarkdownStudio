@@ -29,14 +29,13 @@ public sealed class MruEntry
     [JsonIgnore]
     public string Glyph => Kind == MruKind.Folder ? "" : "";
 
+    // Inline pin toggle button: a plain Pin (E718) when unpinned, and the
+    // slashed Unpin (E77A) glyph once pinned, so the button itself reads as
+    // "click to unpin" — the line-through affordance the user asked for.
     [JsonIgnore]
-    public string PinMenuText => IsPinned ? "Unpin" : "Pin to top";
+    public string PinButtonGlyph => IsPinned ? "" : "";
     [JsonIgnore]
-    public string PinMenuGlyph => "";
-
-    [JsonIgnore]
-    public Microsoft.UI.Xaml.Visibility PinIndicatorVisibility =>
-        IsPinned ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+    public string PinButtonTooltip => IsPinned ? "Unpin" : "Pin to top";
 
     [JsonIgnore]
     public string RelativeWhen

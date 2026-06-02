@@ -155,4 +155,18 @@
         <Setter Property="Foreground" Value="{ThemeResource MdsTextPrimaryBrush}" />
         <Setter Property="FontFamily" Value="{StaticResource MdsUiFontFamilyText}" />
     </Style>
+
+    <!-- Compact icon button for the inline pin / remove actions on MRU rows. -->
+    <Style x:Key="MdsMruActionButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Foreground" Value="{ThemeResource MdsTextSecondaryBrush}" />
+        <Setter Property="Padding" Value="6" />
+        <Setter Property="MinWidth" Value="28" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
 </ResourceDictionary>

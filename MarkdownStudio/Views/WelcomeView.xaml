@@ -11,28 +11,18 @@
                     Style="{StaticResource MdsMruItemStyle}">
                 <Button.ContextFlyout>
                     <MenuFlyout>
-                        <MenuFlyoutItem Text="{x:Bind PinMenuText}" Click="OnPinClicked" Tag="{x:Bind}">
-                            <MenuFlyoutItem.Icon>
-                                <FontIcon Glyph="{x:Bind PinMenuGlyph}" />
-                            </MenuFlyoutItem.Icon>
-                        </MenuFlyoutItem>
                         <MenuFlyoutItem Text="Reveal in File Explorer" Click="OnRevealClicked" Tag="{x:Bind}">
                             <MenuFlyoutItem.Icon>
                                 <FontIcon Glyph="&#xE838;" />
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutSeparator />
-                        <MenuFlyoutItem Text="Remove from list" Click="OnRemoveClicked" Tag="{x:Bind}">
-                            <MenuFlyoutItem.Icon>
-                                <FontIcon Glyph="&#xE74D;" />
-                            </MenuFlyoutItem.Icon>
-                        </MenuFlyoutItem>
                     </MenuFlyout>
                 </Button.ContextFlyout>
-                <Grid ColumnSpacing="14">
+                <Grid ColumnSpacing="10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
@@ -45,14 +35,23 @@
                                    TextTrimming="CharacterEllipsis"
                                    Text="{x:Bind ParentLocation}" />
                     </StackPanel>
-                    <FontIcon Grid.Column="2" Glyph="&#xE840;" FontSize="12"
-                              Foreground="{ThemeResource MdsAccentBrush}"
-                              VerticalAlignment="Center"
-                              Margin="0,0,4,0"
-                              Visibility="{x:Bind PinIndicatorVisibility}" />
-                    <TextBlock Grid.Column="3" Style="{StaticResource MdsCaptionStyle}"
+                    <TextBlock Grid.Column="2" Style="{StaticResource MdsCaptionStyle}"
                                VerticalAlignment="Center"
                                Text="{x:Bind RelativeWhen}" />
+                    <!-- Pin toggle: glyph reflects state (Pin when unpinned,
+                         slashed Unpin once pinned). Replaces the old context
+                         menu pin entry. -->
+                    <Button Grid.Column="3" Click="OnPinClicked" Tag="{x:Bind}"
+                            Style="{StaticResource MdsMruActionButtonStyle}"
+                            ToolTipService.ToolTip="{x:Bind PinButtonTooltip}">
+                        <FontIcon Glyph="{x:Bind PinButtonGlyph}" FontSize="14" />
+                    </Button>
+                    <!-- X removes this entry from the list. -->
+                    <Button Grid.Column="4" Click="OnRemoveClicked" Tag="{x:Bind}"
+                            Style="{StaticResource MdsMruActionButtonStyle}"
+                            ToolTipService.ToolTip="Remove from list">
+                        <FontIcon Glyph="&#xE711;" FontSize="14" />
+                    </Button>
                 </Grid>
             </Button>
         </DataTemplate>

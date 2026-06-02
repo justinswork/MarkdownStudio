@@ -56,15 +56,17 @@ public sealed partial class WelcomeView : UserControl
             MruActivated?.Invoke(entry);
     }
 
+    // Pin / Remove are now inline buttons in the row template (FrameworkElement
+    // covers both those Buttons and any future MenuFlyoutItem reuse).
     private void OnPinClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuFlyoutItem { Tag: MruEntry entry })
+        if (sender is FrameworkElement { Tag: MruEntry entry })
             _mru?.SetPinned(entry.Path, !entry.IsPinned);
     }
 
     private void OnRemoveClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuFlyoutItem { Tag: MruEntry entry })
+        if (sender is FrameworkElement { Tag: MruEntry entry })
             _mru?.Remove(entry.Path);
     }
 
