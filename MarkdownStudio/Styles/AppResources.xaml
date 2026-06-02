@@ -15,6 +15,21 @@
     <SolidColorBrush x:Key="MdsAccentSoftBrush"     Color="#1F007ACC" />
     <SolidColorBrush x:Key="MdsAccentHoverBrush"    Color="#330078D4" />
 
+    <!-- TabView chrome — the selected tab and the strip behind the tabs use
+         their own framework brushes that default to a light grey regardless
+         of the active app theme, so tabs still showed white-ish chrome on
+         Sepia / Solarized. Alias them to our Mds brushes (which ApplyTheme
+         recolors live) so the tab strip follows the theme everywhere. The
+         same aliases are scoped locally in SettingsDialog; defining them at
+         the app level covers the main-window TabView too. -->
+    <StaticResource x:Key="TabViewBackground"                                ResourceKey="MdsWindowBrush" />
+    <StaticResource x:Key="TabViewItemHeaderBackgroundSelected"              ResourceKey="MdsSurfaceBrush" />
+    <StaticResource x:Key="TabViewItemHeaderBackgroundSelectedPointerOver"   ResourceKey="MdsSurfaceBrush" />
+    <StaticResource x:Key="TabViewItemHeaderBackgroundSelectedPressed"       ResourceKey="MdsSurfaceBrush" />
+    <StaticResource x:Key="TabViewItemHeaderForegroundSelected"             ResourceKey="MdsTextPrimaryBrush" />
+    <StaticResource x:Key="TabViewItemHeaderForegroundSelectedPointerOver"  ResourceKey="MdsTextPrimaryBrush" />
+    <StaticResource x:Key="TabViewItemHeaderForegroundSelectedPressed"      ResourceKey="MdsTextPrimaryBrush" />
+
     <!-- Typography -->
     <FontFamily x:Key="MdsUiFontFamily">Segoe UI Variable Display, Segoe UI Variable, Segoe UI, sans-serif</FontFamily>
     <FontFamily x:Key="MdsUiFontFamilyText">Segoe UI Variable Text, Segoe UI Variable, Segoe UI, sans-serif</FontFamily>
