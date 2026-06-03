@@ -358,12 +358,136 @@
       applyGitHubAlerts(article);
 
       if (window.mermaid && window.mermaid.run) {
-        try { window.mermaid.run({ nodes: article.querySelectorAll('pre.mermaid') }); }
-        catch (e) { console.warn('mermaid render failed', e); }
+        var mermaidNodes = article.querySelectorAll('pre.mermaid');
+        // mermaid.run is async in v11; enhance each diagram with pan/zoom
+        // controls only once its SVG has actually been injected.
+        Promise.resolve(window.mermaid.run({ nodes: mermaidNodes }))
+          .then(function () { enhanceMermaidDiagrams(article); })
+          .catch(function (e) { console.warn('mermaid render failed', e); });
       }
 
       requestAnimationFrame(rebuildLineMap);
     }, 30);
+  }
+
+  // -------- Mermaid pan / zoom --------
+  // VS Code shows hover controls on rendered Mermaid diagrams and lets you
+  // pan (drag) and zoom (wheel / buttons). Mermaid emits a plain <svg>, so
+  // we treat the <pre.mermaid> as a clipping viewport and drive a CSS
+  // transform on the SVG. State is per-diagram and reset each re-render
+  // (render() rebuilds article.innerHTML, so we re-enhance every time).
+  function enhanceMermaidDiagrams(article) {
+    var diagrams = article.querySelectorAll('pre.mermaid');
+    for (var i = 0; i < diagrams.length; i++) {
+      var pre = diagrams[i];
+      var svg = pre.querySelector('svg');
+      if (!svg || pre.getAttribute('data-mds-zoom') === '1') continue;
+      pre.setAttribute('data-mds-zoom', '1');
+      setupMermaidZoom(pre, svg);
+    }
+  }
+
+  function setupMermaidZoom(pre, svg) {
+    // Base (scale-1) pixel size of the diagram. Prefer the rendered box;
+    // fall back to the viewBox intrinsic size if the preview is currently
+    // collapsed (zero-size) so we never lock the viewport to 0.
+    var r  = svg.getBoundingClientRect();
+    var vb = svg.viewBox && svg.viewBox.baseVal;
+    var baseW = r.width  || (vb && vb.width)  || 0;
+    var baseH = r.height || (vb && vb.height) || 0;
+    if (!baseW || !baseH) return; // can't establish a viewport; leave as-is
+
+    pre.classList.add('mds-mermaid');
+    pre.style.height = baseH + 'px';
+
+    // maxWidth:none stops mermaid's inline max-width from fighting our
+    // explicit sizing. Position absolute so panning never reflows the page.
+    svg.style.maxWidth = 'none';
+    svg.style.position = 'absolute';
+
+    var scale = 1, tx = 0, ty = 0;
+    var MIN = 0.25, MAX = 8;
+    // Center the diagram horizontally at rest if the viewport is wider.
+    var tx0 = Math.max(0, (pre.clientWidth - baseW) / 2);
+    tx = tx0;
+
+    // Crisp zoom: we resize the SVG's layout box (width/height) rather than
+    // CSS-transform it. With a viewBox, the browser re-rasterizes the vectors
+    // at the new pixel size, so the diagram stays sharp at any zoom — a CSS
+    // scale() would blur it like a stretched bitmap.
+    function apply() {
+      svg.style.width  = (baseW * scale) + 'px';
+      svg.style.height = (baseH * scale) + 'px';
+      svg.style.left   = tx + 'px';
+      svg.style.top    = ty + 'px';
+    }
+    function reset() { scale = 1; tx = tx0; ty = 0; apply(); }
+
+    // Zoom toward a point (px relative to the viewport's top-left) so the
+    // content under the cursor / button stays put.
+    function zoomAt(cx, cy, factor) {
+      var next = Math.min(MAX, Math.max(MIN, scale * factor));
+      if (next === scale) return;
+      var contentX = (cx - tx) / scale;
+      var contentY = (cy - ty) / scale;
+      scale = next;
+      tx = cx - contentX * scale;
+      ty = cy - contentY * scale;
+      apply();
+    }
+
+    // Ctrl+wheel zooms toward the cursor. Plain wheel is left alone so a
+    // tall diagram doesn't trap the page scroll as the user reads past it.
+    pre.addEventListener('wheel', function (e) {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      var b = pre.getBoundingClientRect();
+      zoomAt(e.clientX - b.left, e.clientY - b.top,
+             e.deltaY < 0 ? 1.1 : 1 / 1.1);
+    }, { passive: false });
+
+    var dragging = false, lastX = 0, lastY = 0;
+    pre.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      dragging = true; lastX = e.clientX; lastY = e.clientY;
+      pre.classList.add('mds-grabbing');
+      try { pre.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    pre.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      tx += e.clientX - lastX; ty += e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      apply();
+    });
+    function endDrag(e) {
+      if (!dragging) return;
+      dragging = false;
+      pre.classList.remove('mds-grabbing');
+      try { pre.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+    pre.addEventListener('pointerup', endDrag);
+    pre.addEventListener('pointercancel', endDrag);
+
+    var tools = document.createElement('div');
+    tools.className = 'mds-mermaid-tools';
+    tools.innerHTML =
+      '<button type="button" data-act="in"    title="Zoom in">+</button>' +
+      '<button type="button" data-act="out"   title="Zoom out">−</button>' +
+      '<button type="button" data-act="reset" title="Reset view">↺</button>';
+    // Don't let toolbar interactions start a pan.
+    tools.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+    tools.addEventListener('click', function (e) {
+      var btn = e.target.closest('button');
+      if (!btn) return;
+      var b = pre.getBoundingClientRect();
+      var act = btn.getAttribute('data-act');
+      if (act === 'in')       zoomAt(b.width / 2, b.height / 2, 1.25);
+      else if (act === 'out') zoomAt(b.width / 2, b.height / 2, 1 / 1.25);
+      else                    reset();
+    });
+    pre.appendChild(tools);
+
+    apply();
   }
 
   window.addEventListener('resize', function () {

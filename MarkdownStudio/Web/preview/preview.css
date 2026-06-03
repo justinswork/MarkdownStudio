@@ -433,6 +433,69 @@ body.theme-solarized-dark .mds-xray-cancel { border-color: rgba(255, 255, 255, 0
 body.theme-midnight .mds-xray-cancel:hover,
 body.theme-solarized-dark .mds-xray-cancel:hover { background: rgba(255, 255, 255, 0.08); }
 
+/* ----- Mermaid pan / zoom viewport -----
+   pre.mermaid becomes a clipping box; the SVG inside is transformed by JS
+   (preview.js setupMermaidZoom). Controls fade in on hover, VS Code-style. */
+pre.mermaid.mds-mermaid {
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  padding: 0;            /* the viewport box is the diagram itself */
+  /* The dragging surface shouldn't select text / trigger native pan. */
+  touch-action: none;
+}
+pre.mermaid.mds-mermaid.mds-grabbing { cursor: grabbing; }
+pre.mermaid.mds-mermaid svg {
+  /* JS sets position/left/top/width/height inline. Sizing the layout box
+     (rather than CSS-transforming) keeps the vectors crisp at any zoom. */
+  position: absolute;
+}
+
+.mds-mermaid-tools {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  z-index: 5;
+}
+pre.mermaid.mds-mermaid:hover .mds-mermaid-tools,
+.mds-mermaid-tools:focus-within { opacity: 1; }
+.mds-mermaid-tools button {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: rgba(255, 255, 255, 0.92);
+  color: #14161C;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  user-select: none;
+}
+.mds-mermaid-tools button:hover { background: #ffffff; }
+.mds-mermaid-tools button:active { transform: translateY(1px); }
+
+/* Dark themes: translucent dark chips with light glyphs. */
+body.theme-midnight .mds-mermaid-tools button,
+body.theme-solarized-dark .mds-mermaid-tools button {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(30, 33, 43, 0.92);
+  color: #E8E8EC;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+body.theme-midnight .mds-mermaid-tools button:hover,
+body.theme-solarized-dark .mds-mermaid-tools button:hover {
+  background: rgba(45, 48, 58, 0.96);
+}
+
 /* ----- Common ----- */
 #link-hover-indicator {
   position: fixed;
