@@ -188,12 +188,17 @@
   // Mermaid renders its own SVG, so the page theme class can't reach inside
   // it. Drive Mermaid's 'base' theme with variables that match each app theme
   // (diagram canvas, node fill/border, edges, text) so diagrams blend in.
+  //
+  // For dark themes we use VS Code-style accent colors (cyan border/line/text
+  // on a near-transparent surface) instead of subtle gray-on-gray. Without
+  // this the diagrams blend into the code-block background and the user
+  // can't read them.
   var MERMAID_VARS = {
     'theme-daylight':        { dark: false, bg: '#FCFCFC', surface: '#F1F1F4', text: '#14161C', border: '#C7CBD4', line: '#6E727C' },
-    'theme-midnight':        { dark: true,  bg: '#14161C', surface: '#222633', text: '#E8E8EC', border: '#3A3F4C', line: '#969AA4' },
+    'theme-midnight':        { dark: true,  bg: '#1E212B', surface: '#1E212B', text: '#9CDCFE', border: '#569CD6', line: '#569CD6' },
     'theme-sepia':           { dark: false, bg: '#FCF6E8', surface: '#EFE4C8', text: '#40231F', border: '#C8B997', line: '#78664E' },
     'theme-solarized-light': { dark: false, bg: '#FDF6E3', surface: '#EAE3CC', text: '#586E75', border: '#CBC4AC', line: '#93A1A1' },
-    'theme-solarized-dark':  { dark: true,  bg: '#002B36', surface: '#0A3D4A', text: '#EEE8D5', border: '#1C5468', line: '#93A1A1' }
+    'theme-solarized-dark':  { dark: true,  bg: '#073642', surface: '#073642', text: '#93A1A1', border: '#268BD2', line: '#268BD2' }
   };
 
   function mermaidConfig(cls) {

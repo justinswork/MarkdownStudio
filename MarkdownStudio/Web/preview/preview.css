@@ -199,6 +199,75 @@ body.theme-solarized-dark .markdown-body a          { color: #268BD2; }
 body.theme-solarized-dark .markdown-body h1,
 body.theme-solarized-dark .markdown-body h2         { border-bottom-color: #14546A; }
 
+/* ----- Syntax highlighting overrides for dark themes -----
+   highlight.js ships with the GitHub *light* palette (we use github.css).
+   Once code blocks went dark in midnight / solarized-dark, those pale
+   tokens disappeared against the new background. Override per-token to a
+   VS Code Dark+ palette so keywords / strings / functions / comments all
+   read at a glance, the way they do in VS Code itself. Light themes keep
+   the GitHub palette they were designed for. */
+body.theme-midnight       pre code.hljs,
+body.theme-midnight       .markdown-body pre.hljs,
+body.theme-solarized-dark pre code.hljs,
+body.theme-solarized-dark .markdown-body pre.hljs { color: #D4D4D4; }
+
+body.theme-midnight       .hljs-keyword,
+body.theme-midnight       .hljs-literal,
+body.theme-midnight       .hljs-symbol,
+body.theme-midnight       .hljs-bullet,
+body.theme-midnight       .hljs-meta,
+body.theme-midnight       .hljs-selector-tag,
+body.theme-midnight       .hljs-tag,
+body.theme-midnight       .hljs-name,
+body.theme-solarized-dark .hljs-keyword,
+body.theme-solarized-dark .hljs-literal,
+body.theme-solarized-dark .hljs-symbol,
+body.theme-solarized-dark .hljs-bullet,
+body.theme-solarized-dark .hljs-meta,
+body.theme-solarized-dark .hljs-selector-tag,
+body.theme-solarized-dark .hljs-tag,
+body.theme-solarized-dark .hljs-name              { color: #569CD6; }
+
+body.theme-midnight       .hljs-string,
+body.theme-midnight       .hljs-regexp,
+body.theme-midnight       .hljs-doctag,
+body.theme-solarized-dark .hljs-string,
+body.theme-solarized-dark .hljs-regexp,
+body.theme-solarized-dark .hljs-doctag            { color: #CE9178; }
+
+body.theme-midnight       .hljs-comment,
+body.theme-midnight       .hljs-quote,
+body.theme-solarized-dark .hljs-comment,
+body.theme-solarized-dark .hljs-quote             { color: #6A9955; font-style: italic; }
+
+body.theme-midnight       .hljs-number,
+body.theme-solarized-dark .hljs-number            { color: #B5CEA8; }
+
+body.theme-midnight       .hljs-built_in,
+body.theme-midnight       .hljs-type,
+body.theme-midnight       .hljs-class .hljs-title,
+body.theme-solarized-dark .hljs-built_in,
+body.theme-solarized-dark .hljs-type,
+body.theme-solarized-dark .hljs-class .hljs-title { color: #4EC9B0; }
+
+body.theme-midnight       .hljs-title,
+body.theme-midnight       .hljs-function .hljs-title,
+body.theme-midnight       .hljs-title.function_,
+body.theme-solarized-dark .hljs-title,
+body.theme-solarized-dark .hljs-function .hljs-title,
+body.theme-solarized-dark .hljs-title.function_   { color: #DCDCAA; }
+
+body.theme-midnight       .hljs-variable,
+body.theme-midnight       .hljs-template-variable,
+body.theme-midnight       .hljs-attr,
+body.theme-midnight       .hljs-attribute,
+body.theme-midnight       .hljs-params,
+body.theme-solarized-dark .hljs-variable,
+body.theme-solarized-dark .hljs-template-variable,
+body.theme-solarized-dark .hljs-attr,
+body.theme-solarized-dark .hljs-attribute,
+body.theme-solarized-dark .hljs-params            { color: #9CDCFE; }
+
 /* ----- GitHub-style blockquote alerts ----- */
 .markdown-body blockquote.mds-alert {
   border-left-width: 4px;
