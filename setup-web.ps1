@@ -200,7 +200,25 @@ try {
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 '@
-        Set-Content -Path (Join-Path $previewLibDir 'markdown-it-katex.min.js') -Value $wrapper -Encoding utf8
+        $katexOut = Join-Path $previewLibDir 'markdown-it-katex.min.js'
+        Set-Content -Path $katexOut -Value $wrapper -Encoding utf8
+
+        # Guard against the here-string regression that silently breaks
+        # block math: a double-quoted here-string expands PowerShell's $$
+        # automatic variable, emptying every "$$" delimiter literal and
+        # leaving inline ($...$) working but display ($$ ... $$) broken.
+        # Fail loudly here rather than shipping a preview that drops every
+        # display equation. (Two delimiter sites in math_block + the inline
+        # fall-through == at least 3 occurrences when intact.)
+        $katexBody = Get-Content -Path $katexOut -Raw
+        $dollarPairs = ([regex]::Matches($katexBody, '\$\$')).Count
+        if ($dollarPairs -lt 3) {
+            # Single-quoted literals so $$ / $wrapper stay literal in the message.
+            throw ('Generated markdown-it-katex shim is missing its $$ delimiters (' +
+                   $dollarPairs +
+                   ' found, expected >= 3). The $wrapper here-string must stay ' +
+                   'single-quoted (@''...''@) so PowerShell does not expand $$.')
+        }
     } else {
         Copy-Item -Force -Path $katexMdJs -Destination (Join-Path $previewLibDir 'markdown-it-katex.min.js')
     }
