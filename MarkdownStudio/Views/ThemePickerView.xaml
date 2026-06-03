@@ -73,23 +73,26 @@
                 Background="{ThemeResource MdsSurfaceBrush}"
                 BorderBrush="{ThemeResource MdsBorderBrush}"
                 BorderThickness="1">
-            <Grid ColumnSpacing="12">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+            <!-- Title, description, then a LEFT-aligned button below. The
+                 button deliberately doesn't sit in the bottom-right corner:
+                 that's where dialogs put OK / Apply / Cancel, so a button
+                 there got mis-clicked when the user just meant to dismiss
+                 Settings (the close X lives top-right). Left-aligned here,
+                 it's clearly part of this section's content rather than a
+                 dialog action. -->
+            <StackPanel Spacing="10">
+                <StackPanel Spacing="2">
                     <TextBlock Style="{StaticResource MdsBodyStrongStyle}"
                                Text="File associations" />
                     <TextBlock Style="{StaticResource MdsCaptionStyle}"
                                TextWrapping="Wrap"
                                Text="Make Markdown Studio the default app for .md and other Markdown files. Opens Windows Settings → Default apps." />
                 </StackPanel>
-                <Button Grid.Column="1" Click="OnOpenDefaultApps"
+                <Button Click="OnOpenDefaultApps"
+                        HorizontalAlignment="Left"
                         Style="{StaticResource MdsAccentButtonStyle}"
-                        VerticalAlignment="Center"
                         Content="Set as default…" />
-            </Grid>
+            </StackPanel>
         </Border>
     </Grid>
 </UserControl>
